@@ -836,98 +836,16 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                         />
                       </div>
 
-                      <div className="grid grid-cols-2 gap-2">
-                        <div>
-                          <label className="block text-xs font-serif text-amber-200 mb-1">
-                            Tarihsel Dönem / Çağ
-                          </label>
-                          <input
-                            type="text"
-                            value={formEra}
-                            onChange={(e) => setFormEra(e.target.value)}
-                            placeholder="Örn. M.Ö. 1200 (Geç Tunç Çağı)"
-                            className="w-full px-3 py-2 rounded-lg bg-stone-900 border border-stone-700 text-stone-100 text-xs focus:outline-none focus:border-amber-500"
-                          />
-                        </div>
-
-                        <div>
-                          <label className="block text-xs font-serif text-amber-200 mb-1">
-                            Kazı / Buluntu Yeri (Menşei)
-                          </label>
-                          <input
-                            type="text"
-                            value={formProvenance}
-                            onChange={(e) => setFormProvenance(e.target.value)}
-                            placeholder="Örn. Truva Antik Kenti, Çanakkale"
-                            className="w-full px-3 py-2 rounded-lg bg-stone-900 border border-stone-700 text-stone-100 text-xs focus:outline-none focus:border-amber-500"
-                          />
-                        </div>
-                      </div>
-
-                      <div className="grid grid-cols-2 gap-2">
-                        <div>
-                          <label className="block text-xs font-serif text-amber-200 mb-1">
-                            Malzeme / Materyal
-                          </label>
-                          <input
-                            type="text"
-                            value={formMaterial}
-                            onChange={(e) => setFormMaterial(e.target.value)}
-                            placeholder="Örn. Dövme Altın, Değerli Taş"
-                            className="w-full px-3 py-2 rounded-lg bg-stone-900 border border-stone-700 text-stone-100 text-xs focus:outline-none focus:border-amber-500"
-                          />
-                        </div>
-
-                        <div>
-                          <label className="block text-xs font-serif text-amber-200 mb-1">
-                            Boyutlar
-                          </label>
-                          <input
-                            type="text"
-                            value={formDimensions}
-                            onChange={(e) => setFormDimensions(e.target.value)}
-                            placeholder="Örn. 24 x 18 cm"
-                            className="w-full px-3 py-2 rounded-lg bg-stone-900 border border-stone-700 text-stone-100 text-xs focus:outline-none focus:border-amber-500"
-                          />
-                        </div>
-                      </div>
-
                       <div>
-                        <label className="block text-xs font-serif text-amber-200 mb-1">
-                          Arkeolojik Açıklama & Tarihçe
+                        <label className="block text-xs font-serif font-semibold text-amber-200 mb-1">
+                          Açıklama
                         </label>
                         <textarea
-                          rows={3}
+                          rows={6}
                           value={formDescription}
                           onChange={(e) => setFormDescription(e.target.value)}
-                          placeholder="Eserin arkeolojik tarihçesi, sanatsal bağlamı ve detaylı anlatımı..."
+                          placeholder="Eser hakkında detaylı açıklama..."
                           className="w-full px-3 py-2 rounded-lg bg-stone-900 border border-stone-700 text-stone-100 text-xs focus:outline-none focus:border-amber-500 font-sans"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-xs font-serif text-amber-200 mb-1">
-                          Küratör Kazı Notları
-                        </label>
-                        <textarea
-                          rows={2}
-                          value={formCuratorNotes}
-                          onChange={(e) => setFormCuratorNotes(e.target.value)}
-                          placeholder="Kazı stratigrafisi, restorasyon veya keşif saha notları..."
-                          className="w-full px-3 py-2 rounded-lg bg-stone-900 border border-stone-700 text-stone-100 text-xs focus:outline-none focus:border-amber-500 font-sans"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-xs font-serif text-amber-200 mb-1">
-                          Sesli Rehber Anlatım Metni
-                        </label>
-                        <input
-                          type="text"
-                          value={formAudioText}
-                          onChange={(e) => setFormAudioText(e.target.value)}
-                          placeholder="Sesli rehber tarafından seslendirilecek metin..."
-                          className="w-full px-3 py-2 rounded-lg bg-stone-900 border border-stone-700 text-stone-100 text-xs focus:outline-none focus:border-amber-500"
                         />
                       </div>
 

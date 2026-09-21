@@ -5,13 +5,9 @@ import {
   Moon,
   Footprints,
   Orbit,
-  Volume2,
-  VolumeX,
   Lock,
   Play,
   Pause,
-  Compass,
-  Sparkles,
 } from 'lucide-react';
 import { TimeOfDay, CameraMode } from '../types';
 
@@ -20,8 +16,6 @@ interface HeaderBarProps {
   onTimeOfDayChange: (time: TimeOfDay) => void;
   cameraMode: CameraMode;
   onCameraModeChange: (mode: CameraMode) => void;
-  isAudioMuted: boolean;
-  onToggleAudio: () => void;
   isTouring: boolean;
   onToggleTour: () => void;
   onOpenAdmin: () => void;
@@ -34,8 +28,6 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
   onTimeOfDayChange,
   cameraMode,
   onCameraModeChange,
-  isAudioMuted,
-  onToggleAudio,
   isTouring,
   onToggleTour,
   onOpenAdmin,
@@ -155,7 +147,7 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
         </div>
       </div>
 
-      {/* Right Controls: Guided Tour, Sound, Admin Panel */}
+      {/* Right Controls: Guided Tour, Admin Panel */}
       <div className="flex items-center gap-1 sm:gap-2">
         {/* Guided Tour Autoplay */}
         <button
@@ -170,16 +162,6 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
         >
           {isTouring ? <Pause className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5 fill-current" />}
           <span className="hidden md:inline">Tur</span>
-        </button>
-
-        {/* Audio Mute/Unmute */}
-        <button
-          id="header-audio-toggle-btn"
-          onClick={onToggleAudio}
-          className="min-h-[36px] min-w-[36px] p-2 rounded-xl bg-stone-900/90 border border-stone-800 text-stone-300 hover:text-amber-300 transition-colors flex items-center justify-center active:scale-95"
-          title={isAudioMuted ? 'Ortam Sesini Aç' : 'Ortam Sesini Kapat'}
-        >
-          {isAudioMuted ? <VolumeX className="w-4 h-4 text-stone-500" /> : <Volume2 className="w-4 h-4 text-amber-400" />}
         </button>
 
         {/* Admin Curator Portal Trigger */}

@@ -143,9 +143,6 @@ export const ControlsGuide: React.FC<ControlsGuideProps> = ({
                         <p className="text-[10px] sm:text-[11px] font-serif font-semibold truncate leading-tight">
                           {ex.title}
                         </p>
-                        <p className="text-[8px] sm:text-[9px] text-stone-400 truncate leading-none mt-0.5">
-                          {ex.era}
-                        </p>
                       </div>
                     </button>
                   );

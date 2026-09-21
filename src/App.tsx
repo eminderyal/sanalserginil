@@ -177,8 +177,6 @@ export default function App() {
         onTimeOfDayChange={setTimeOfDay}
         cameraMode={cameraMode}
         onCameraModeChange={setCameraMode}
-        isAudioMuted={isAudioMuted}
-        onToggleAudio={handleToggleAudio}
         isTouring={isTouring}
         onToggleTour={() => setIsTouring(!isTouring)}
         onOpenAdmin={() => setIsAdminOpen(true)}
@@ -214,7 +212,6 @@ export default function App() {
         >
           <span className="w-2 h-2 rounded-full bg-amber-400 animate-ping" />
           <span className="text-xs font-serif font-semibold">{hoveredExhibit.title}</span>
-          <span className="text-[11px] text-stone-400 font-sans">({hoveredExhibit.era})</span>
           <span className="text-[10px] text-amber-400/80 uppercase font-mono ml-1">İncelemek için Tıkla</span>
         </div>
       )}

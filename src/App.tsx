@@ -9,9 +9,10 @@ import { ExhibitionScene } from './scene/ExhibitionScene';
 import { DEFAULT_EXHIBITS } from './data/defaultExhibits';
 import { Exhibit, TimeOfDay, CameraMode, PlayerState } from './types';
 import { soundManager } from './audio/soundManager';
+import { subscribeToExhibits, syncAllExhibitsToCloud } from './firebase';
 
 export default function App() {
-  // Exhibits State with persistent localStorage
+  // Exhibits State with persistent localStorage + Firestore real-time sync
   const [exhibits, setExhibits] = useState<Exhibit[]>(() => {
     try {
       const saved = localStorage.getItem('archaeo_exhibits_data');
@@ -35,17 +36,49 @@ export default function App() {
   const [isAdminOpen, setIsAdminOpen] = useState(false);
   const [isAudioMuted, setIsAudioMuted] = useState(false);
   const [isTouring, setIsTouring] = useState(false);
+  const [isCloudSynced, setIsCloudSynced] = useState(false);
 
   const sceneRef = useRef<ExhibitionScene | null>(null);
   const tourTimerRef = useRef<number | null>(null);
 
-  // Persistence handler
-  const handleSaveExhibits = (newExhibits: Exhibit[]) => {
+  // Subscribe to real-time Cloud Firestore updates for all visitors
+  useEffect(() => {
+    const unsubscribe = subscribeToExhibits(
+      (cloudExhibits) => {
+        if (cloudExhibits && cloudExhibits.length > 0) {
+          setExhibits(cloudExhibits);
+          setIsCloudSynced(true);
+          try {
+            localStorage.setItem('archaeo_exhibits_data', JSON.stringify(cloudExhibits));
+          } catch (e) {
+            console.warn('Failed to cache exhibits locally', e);
+          }
+        }
+      },
+      (error) => {
+        console.warn('Firestore cloud connection warning, using local state:', error);
+      }
+    );
+
+    return () => {
+      unsubscribe();
+    };
+  }, []);
+
+  // Persistence handler for saving and syncing across all users
+  const handleSaveExhibits = async (newExhibits: Exhibit[]) => {
     setExhibits(newExhibits);
     try {
       localStorage.setItem('archaeo_exhibits_data', JSON.stringify(newExhibits));
     } catch (e) {
       console.warn('Failed to persist exhibits to localStorage', e);
+    }
+
+    try {
+      await syncAllExhibitsToCloud(newExhibits);
+      setIsCloudSynced(true);
+    } catch (err) {
+      console.error('Failed to sync exhibits to Firestore cloud database:', err);
     }
   };
 
@@ -144,6 +177,7 @@ export default function App() {
         onToggleTour={() => setIsTouring(!isTouring)}
         onOpenAdmin={() => setIsAdminOpen(true)}
         exhibitsCount={exhibits.length}
+        isCloudSynced={isCloudSynced}
       />
 
       {/* 3. Real-Time Archaeological Survey Radar / Minimap */}

@@ -66,6 +66,13 @@ export class ExhibitionScene {
   private animationFrameId: number | null = null;
   private isDisposed = false;
 
+  // Touch Interaction State for Mobile Navigation
+  private lastTouchPos = { x: 0, y: 0 };
+  private touchStartPos = { x: 0, y: 0 };
+  private touchStartTime = 0;
+  private lastPinchDist = 0;
+  private isTouching = false;
+
   constructor(
     container: HTMLElement,
     initialExhibits: Exhibit[],
@@ -106,6 +113,7 @@ export class ExhibitionScene {
     this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
     this.renderer.toneMappingExposure = 1.1;
+    this.renderer.domElement.style.touchAction = 'none';
 
     container.appendChild(this.renderer.domElement);
 
@@ -305,6 +313,12 @@ export class ExhibitionScene {
     el.addEventListener('mouseup', this.handleMouseUp);
     el.addEventListener('wheel', this.handleWheel, { passive: false });
     el.addEventListener('click', this.handleClick);
+
+    // Mobile touch controls
+    el.addEventListener('touchstart', this.handleTouchStart, { passive: false });
+    el.addEventListener('touchmove', this.handleTouchMove, { passive: false });
+    el.addEventListener('touchend', this.handleTouchEnd, { passive: false });
+    el.addEventListener('touchcancel', this.handleTouchEnd, { passive: false });
   }
 
   private handleKeyDown = (e: KeyboardEvent) => {
@@ -373,6 +387,90 @@ export class ExhibitionScene {
       if (exhibit && this.onExhibitClickCallback) {
         this.focusOnExhibit(exhibit);
         this.onExhibitClickCallback(exhibit);
+      }
+    }
+  };
+
+  private handleTouchStart = (e: TouchEvent) => {
+    if (e.touches.length === 1) {
+      const t = e.touches[0];
+      this.isTouching = true;
+      this.lastTouchPos = { x: t.clientX, y: t.clientY };
+      this.touchStartPos = { x: t.clientX, y: t.clientY };
+      this.touchStartTime = performance.now();
+      soundManager.startAmbient();
+    } else if (e.touches.length === 2) {
+      this.lastPinchDist = Math.hypot(
+        e.touches[0].clientX - e.touches[1].clientX,
+        e.touches[0].clientY - e.touches[1].clientY
+      );
+    }
+  };
+
+  private handleTouchMove = (e: TouchEvent) => {
+    if (e.cancelable) {
+      e.preventDefault();
+    }
+
+    if (e.touches.length === 1 && this.isTouching) {
+      const t = e.touches[0];
+      const dx = t.clientX - this.lastTouchPos.x;
+      const dy = t.clientY - this.lastTouchPos.y;
+      this.lastTouchPos = { x: t.clientX, y: t.clientY };
+
+      if (this.cameraMode === 'first_person' && !this.isTransitioning) {
+        this.playerRotation.yaw -= dx * 0.0045;
+        this.playerRotation.pitch -= dy * 0.0045;
+        this.playerRotation.pitch = Math.max(-Math.PI / 2.3, Math.min(Math.PI / 2.3, this.playerRotation.pitch));
+      } else if (this.cameraMode === 'orbit') {
+        this.orbitTheta -= dx * 0.007;
+        this.orbitPhi = Math.max(0.1, Math.min(Math.PI / 2.1, this.orbitPhi - dy * 0.007));
+        this.updateOrbitCamera();
+      }
+    } else if (e.touches.length === 2) {
+      const currentDist = Math.hypot(
+        e.touches[0].clientX - e.touches[1].clientX,
+        e.touches[0].clientY - e.touches[1].clientY
+      );
+      if (this.lastPinchDist > 0 && this.cameraMode === 'orbit') {
+        const pinchDelta = this.lastPinchDist - currentDist;
+        this.orbitDistance = Math.max(8, Math.min(60, this.orbitDistance + pinchDelta * 0.08));
+        this.updateOrbitCamera();
+      }
+      this.lastPinchDist = currentDist;
+    }
+  };
+
+  private handleTouchEnd = (e: TouchEvent) => {
+    if (e.touches.length === 0) {
+      this.isTouching = false;
+      this.lastPinchDist = 0;
+
+      // Detect quick tap (<350ms, <15px delta)
+      const duration = performance.now() - this.touchStartTime;
+      const changedTouch = e.changedTouches[0];
+      if (changedTouch && duration < 350) {
+        const dist = Math.hypot(
+          changedTouch.clientX - this.touchStartPos.x,
+          changedTouch.clientY - this.touchStartPos.y
+        );
+        if (dist < 15) {
+          const rect = this.renderer.domElement.getBoundingClientRect();
+          this.mouseVec.x = ((changedTouch.clientX - rect.left) / rect.width) * 2 - 1;
+          this.mouseVec.y = -((changedTouch.clientY - rect.top) / rect.height) * 2 + 1;
+
+          this.raycaster.setFromCamera(this.mouseVec, this.camera);
+          const intersects = this.raycaster.intersectObjects(this.interactiveMeshes, false);
+
+          if (intersects.length > 0) {
+            const hit = intersects[0].object;
+            const exhibit = hit.userData.exhibit as Exhibit;
+            if (exhibit && this.onExhibitClickCallback) {
+              this.focusOnExhibit(exhibit);
+              this.onExhibitClickCallback(exhibit);
+            }
+          }
+        }
       }
     }
   };
@@ -560,6 +658,10 @@ export class ExhibitionScene {
     el.removeEventListener('mouseup', this.handleMouseUp);
     el.removeEventListener('wheel', this.handleWheel);
     el.removeEventListener('click', this.handleClick);
+    el.removeEventListener('touchstart', this.handleTouchStart);
+    el.removeEventListener('touchmove', this.handleTouchMove);
+    el.removeEventListener('touchend', this.handleTouchEnd);
+    el.removeEventListener('touchcancel', this.handleTouchEnd);
 
     if (this.container && el.parentNode === this.container) {
       this.container.removeChild(el);

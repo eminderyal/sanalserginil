@@ -1,0 +1,37 @@
+{
+  "entities": {
+    "Exhibit": {
+      "title": "Exhibit",
+      "description": "Archaeological artifact displayed on an open-air 3D plinth",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Unique identifier of the exhibit" },
+        "title": { "type": "string", "description": "Artifact name or title" },
+        "subtitle": { "type": "string", "description": "Secondary title" },
+        "era": { "type": "string", "description": "Historical period or dynasty" },
+        "provenance": { "type": "string", "description": "Discovery location or archaeological excavation site" },
+        "material": { "type": "string", "description": "Composition medium" },
+        "dimensions": { "type": "string", "description": "Physical measurements" },
+        "description": { "type": "string", "description": "Archaeological description" },
+        "curatorNotes": { "type": "string", "description": "Curatorial analysis" },
+        "imageUrl": { "type": "string", "description": "Artifact photo URL or data" },
+        "thumbnailUrl": { "type": "string", "description": "Thumbnail preview URL" },
+        "frameStyle": { "type": "string", "enum": ["stone_pedestal", "glass_vitrine", "bronze_stela", "obsidian_monolith"] },
+        "position": { "type": "array", "description": "3D spatial coordinates [x, y, z]" },
+        "rotationY": { "type": "number", "description": "Rotation around Y axis" },
+        "scale": { "type": "number", "description": "Scale multiplier" },
+        "tags": { "type": "array", "description": "Categorization tags" },
+        "createdAt": { "type": "number", "description": "Timestamp created" },
+        "highlightColor": { "type": "string", "description": "Beacon illumination tint" },
+        "audioGuideText": { "type": "string", "description": "Narration text for speech synthesizer" }
+      },
+      "required": ["id", "title", "era", "provenance", "material", "description", "imageUrl", "frameStyle", "position", "tags", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/exhibits/{exhibitId}": {
+      "schema": { "$ref": "Exhibit" },
+      "description": "Collection of exhibition artifacts and plinths synchronized in real time across all visitors"
+    }
+  }
+}

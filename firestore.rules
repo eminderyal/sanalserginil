@@ -1,0 +1,10 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Exhibits are publicly readable by all visitors and editable by curators
+    match /exhibits/{exhibitId} {
+      allow read: if true;
+      allow write: if true;
+    }
+  }
+}

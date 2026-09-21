@@ -148,8 +148,41 @@ export const AdminModal: React.FC<AdminModalProps> = ({
     const reader = new FileReader();
     reader.onload = (loadEvt) => {
       const dataUrl = loadEvt.target?.result as string;
-      setFormImageUrl(dataUrl);
-      showNotification('Image uploaded successfully into 3D exhibit stand');
+      
+      // Optimize image via Canvas to avoid large base64 strings
+      const img = new Image();
+      img.onload = () => {
+        const maxDim = 1200;
+        let w = img.width;
+        let h = img.height;
+        if (w > maxDim || h > maxDim) {
+          if (w > h) {
+            h = Math.round((h * maxDim) / w);
+            w = maxDim;
+          } else {
+            w = Math.round((w * maxDim) / h);
+            h = maxDim;
+          }
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = w;
+        canvas.height = h;
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+          ctx.drawImage(img, 0, 0, w, h);
+          const optimizedDataUrl = canvas.toDataURL('image/jpeg', 0.85);
+          setFormImageUrl(optimizedDataUrl);
+          showNotification('Photo uploaded & optimized for 3D exhibition');
+        } else {
+          setFormImageUrl(dataUrl);
+          showNotification('Photo uploaded successfully');
+        }
+      };
+      img.onerror = () => {
+        setFormImageUrl(dataUrl);
+        showNotification('Photo uploaded successfully');
+      };
+      img.src = dataUrl;
     };
     reader.readAsDataURL(file);
   };

@@ -10,6 +10,16 @@
   }
 }
 
+html, body, #root {
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+  overscroll-behavior: none;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
 @keyframes spinSlow {
   from {
     transform: rotate(0deg);

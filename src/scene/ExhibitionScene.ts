@@ -454,7 +454,7 @@ export class ExhibitionScene {
 
       // Forward/Right vectors based on yaw
       const forward = new THREE.Vector3(Math.sin(this.playerRotation.yaw), 0, Math.cos(this.playerRotation.yaw));
-      const right = new THREE.Vector3(Math.cos(this.playerRotation.yaw), 0, -Math.sin(this.playerRotation.yaw));
+      const right = new THREE.Vector3(-Math.cos(this.playerRotation.yaw), 0, Math.sin(this.playerRotation.yaw));
 
       const displacement = new THREE.Vector3()
         .addScaledVector(forward, -normZ * speed)

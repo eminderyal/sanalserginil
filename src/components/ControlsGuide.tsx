@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { HelpCircle, ChevronUp, ChevronDown, Sparkles, Navigation, X } from 'lucide-react';
+import React, { useState, useRef } from 'react';
+import { HelpCircle, ChevronUp, ChevronDown, Sparkles, X, ArrowUp, ArrowDown, ArrowLeft, ArrowRight } from 'lucide-react';
 import { Exhibit } from '../types';
 
 interface ControlsGuideProps {
@@ -16,9 +16,21 @@ export const ControlsGuide: React.FC<ControlsGuideProps> = ({
   exhibits,
   selectedExhibit,
   onSelectExhibit,
+  onTouchJoystickMove,
 }) => {
   const [showHelper, setShowHelper] = useState(true);
   const [isCarouselOpen, setIsCarouselOpen] = useState(true);
+  const activeDirRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
+
+  const startMove = (x: number, y: number) => {
+    activeDirRef.current = { x, y };
+    onTouchJoystickMove(x, y);
+  };
+
+  const stopMove = () => {
+    activeDirRef.current = { x: 0, y: 0 };
+    onTouchJoystickMove(0, 0);
+  };
 
   return (
     <>
@@ -141,6 +153,89 @@ export const ControlsGuide: React.FC<ControlsGuideProps> = ({
           )}
         </div>
       </div>
+
+      {/* 3. On-Screen Virtual D-Pad (Accessible on Mobile / Tablet / Mouse) in First-Person Walk Mode */}
+      {cameraMode === 'first_person' && (
+        <div
+          id="virtual-dpad-controls"
+          className="fixed bottom-6 right-6 z-20 flex flex-col items-center select-none bg-stone-950/80 backdrop-blur-md p-2 rounded-2xl border border-stone-800/90 shadow-2xl touch-none"
+        >
+          {/* Up Button */}
+          <button
+            id="dpad-up-btn"
+            type="button"
+            onPointerDown={(e) => {
+              e.currentTarget.setPointerCapture(e.pointerId);
+              startMove(0, 1);
+            }}
+            onPointerUp={stopMove}
+            onPointerCancel={stopMove}
+            onContextMenu={(e) => e.preventDefault()}
+            className="w-10 h-10 rounded-xl bg-stone-900/90 hover:bg-amber-500/20 active:bg-amber-500 active:text-stone-950 border border-stone-700 text-stone-300 flex items-center justify-center shadow transition-all active:scale-90"
+            title="Move Forward (W / Arrow Up)"
+            aria-label="Move Forward"
+          >
+            <ArrowUp className="w-5 h-5" />
+          </button>
+
+          {/* Left, Center, Right Row */}
+          <div className="flex items-center gap-1.5 my-1">
+            <button
+              id="dpad-left-btn"
+              type="button"
+              onPointerDown={(e) => {
+                e.currentTarget.setPointerCapture(e.pointerId);
+                startMove(-1, 0);
+              }}
+              onPointerUp={stopMove}
+              onPointerCancel={stopMove}
+              onContextMenu={(e) => e.preventDefault()}
+              className="w-10 h-10 rounded-xl bg-stone-900/90 hover:bg-amber-500/20 active:bg-amber-500 active:text-stone-950 border border-stone-700 text-stone-300 flex items-center justify-center shadow transition-all active:scale-90"
+              title="Move Left (A / Arrow Left)"
+              aria-label="Move Left"
+            >
+              <ArrowLeft className="w-5 h-5" />
+            </button>
+
+            <div className="w-4 h-4 rounded-full bg-stone-800 border border-stone-700" />
+
+            <button
+              id="dpad-right-btn"
+              type="button"
+              onPointerDown={(e) => {
+                e.currentTarget.setPointerCapture(e.pointerId);
+                startMove(1, 0);
+              }}
+              onPointerUp={stopMove}
+              onPointerCancel={stopMove}
+              onContextMenu={(e) => e.preventDefault()}
+              className="w-10 h-10 rounded-xl bg-stone-900/90 hover:bg-amber-500/20 active:bg-amber-500 active:text-stone-950 border border-stone-700 text-stone-300 flex items-center justify-center shadow transition-all active:scale-90"
+              title="Move Right (D / Arrow Right)"
+              aria-label="Move Right"
+            >
+              <ArrowRight className="w-5 h-5" />
+            </button>
+          </div>
+
+          {/* Down Button */}
+          <button
+            id="dpad-down-btn"
+            type="button"
+            onPointerDown={(e) => {
+              e.currentTarget.setPointerCapture(e.pointerId);
+              startMove(0, -1);
+            }}
+            onPointerUp={stopMove}
+            onPointerCancel={stopMove}
+            onContextMenu={(e) => e.preventDefault()}
+            className="w-10 h-10 rounded-xl bg-stone-900/90 hover:bg-amber-500/20 active:bg-amber-500 active:text-stone-950 border border-stone-700 text-stone-300 flex items-center justify-center shadow transition-all active:scale-90"
+            title="Move Backward (S / Arrow Down)"
+            aria-label="Move Backward"
+          >
+            <ArrowDown className="w-5 h-5" />
+          </button>
+        </div>
+      )}
     </>
   );
 };

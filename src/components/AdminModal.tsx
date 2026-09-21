@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   X,
   Upload,
@@ -62,10 +62,25 @@ export const AdminModal: React.FC<AdminModalProps> = ({
   const [formRotationY, setFormRotationY] = useState<number>(0);
   const [formTags, setFormTags] = useState('');
   const [formAudioText, setFormAudioText] = useState('');
+  const [formAspectRatio, setFormAspectRatio] = useState<number | undefined>(undefined);
   const [isSaving, setIsSaving] = useState(false);
 
   const [notification, setNotification] = useState<{ msg: string; type: 'success' | 'error' } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Auto-detect image aspect ratio if user pastes an external image URL
+  useEffect(() => {
+    if (formImageUrl && (formImageUrl.startsWith('http://') || formImageUrl.startsWith('https://'))) {
+      const img = new Image();
+      img.onload = () => {
+        if (img.naturalWidth && img.naturalHeight) {
+          const aspect = Math.round((img.naturalWidth / img.naturalHeight) * 100) / 100;
+          setFormAspectRatio(aspect);
+        }
+      };
+      img.src = formImageUrl;
+    }
+  }, [formImageUrl]);
 
   if (!isOpen) return null;
 
@@ -104,6 +119,7 @@ export const AdminModal: React.FC<AdminModalProps> = ({
     setFormCuratorNotes('');
     setFormImageUrl('');
     setFormFrameStyle('stone_pedestal');
+    setFormAspectRatio(undefined);
     
     // Auto find an open spot with spiral expansion around the sanctuary forum
     const count = exhibits.length;
@@ -135,6 +151,7 @@ export const AdminModal: React.FC<AdminModalProps> = ({
     setFormRotationY(exhibit.rotationY || 0);
     setFormTags(exhibit.tags ? exhibit.tags.join(', ') : '');
     setFormAudioText(exhibit.audioGuideText || '');
+    setFormAspectRatio(exhibit.aspectRatio);
     setActiveTab('editor');
   };
 
@@ -154,6 +171,9 @@ export const AdminModal: React.FC<AdminModalProps> = ({
       // Optimize image via Canvas to avoid large base64 strings and ensure fast sync
       const img = new Image();
       img.onload = () => {
+        const aspect = Math.round((img.naturalWidth / img.naturalHeight) * 100) / 100;
+        setFormAspectRatio(aspect);
+
         const maxDim = 800;
         let w = img.width;
         let h = img.height;
@@ -178,7 +198,7 @@ export const AdminModal: React.FC<AdminModalProps> = ({
             optimizedDataUrl = canvas.toDataURL('image/jpeg', 0.6);
           }
           setFormImageUrl(optimizedDataUrl);
-          showNotification('Fotoğraf yüklendi ve bulut senkronizasyonu için optimize edildi');
+          showNotification('Fotoğraf yüklendi ve 3D kaide oranı uyarlandı');
         } else {
           setFormImageUrl(dataUrl);
           showNotification('Fotoğraf yüklendi');
@@ -231,6 +251,7 @@ export const AdminModal: React.FC<AdminModalProps> = ({
             position: [formPosX, 0, formPosZ],
             rotationY: formRotationY,
             tags: tagsArray,
+            aspectRatio: formAspectRatio,
             audioGuideText: formAudioText.trim() || undefined,
           };
         }
@@ -254,6 +275,7 @@ export const AdminModal: React.FC<AdminModalProps> = ({
         position: [formPosX, 0, formPosZ],
         rotationY: formRotationY,
         tags: tagsArray,
+        aspectRatio: formAspectRatio,
         createdAt: Date.now(),
         audioGuideText: formAudioText.trim() || undefined,
       };
@@ -657,6 +679,22 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                             className="hidden"
                           />
                         </div>
+                        {formAspectRatio && (
+                          <div className="mt-2 flex items-center justify-between px-3 py-1.5 rounded-lg bg-stone-900/80 border border-amber-500/30 text-[11px]">
+                            <span className="text-stone-400">
+                              Otomatik En-Boy Oranı:
+                            </span>
+                            <span className="font-mono text-amber-300 font-semibold">
+                              {formAspectRatio >= 1.4
+                                ? `${formAspectRatio}:1 (Geniş Yatay)`
+                                : formAspectRatio > 1.05
+                                ? `${formAspectRatio}:1 (Yatay)`
+                                : formAspectRatio >= 0.95
+                                ? '1:1 (Kare)'
+                                : `${formAspectRatio}:1 (Dikey)`}
+                            </span>
+                          </div>
+                        )}
                       </div>
 
                       {/* Or direct URL input */}

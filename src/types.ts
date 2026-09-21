@@ -20,6 +20,7 @@ export interface Exhibit {
   position: [number, number, number]; // [x, y, z] in 3D world
   rotationY?: number; // radians or degrees
   scale?: number;
+  aspectRatio?: number; // width / height of artifact image
   tags: string[];
   createdAt: number;
   highlightColor?: string;

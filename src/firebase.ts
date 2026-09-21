@@ -74,6 +74,7 @@ export function sanitizeExhibitForFirestore(exhibit: Exhibit): Record<string, an
   if (exhibit.highlightColor) clean.highlightColor = exhibit.highlightColor;
   if (exhibit.audioGuideText) clean.audioGuideText = exhibit.audioGuideText;
   if (typeof exhibit.scale === 'number') clean.scale = exhibit.scale;
+  if (typeof exhibit.aspectRatio === 'number') clean.aspectRatio = exhibit.aspectRatio;
 
   return clean;
 }

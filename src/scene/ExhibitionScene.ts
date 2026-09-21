@@ -222,18 +222,19 @@ export class ExhibitionScene {
       this.renderer.toneMappingExposure = 1.15;
       this.braziers.forEach(b => { b.intensity = 0.3; });
     } else if (time === 'sunset') {
-      this.scene.background = new THREE.Color(0xc94c4c);
-      this.scene.fog = new THREE.FogExp2(0x9b4b57, 0.02);
-      this.hemiLight.color.setHex(0xff758f);
-      this.hemiLight.groundColor.setHex(0x3d1c24);
-      this.hemiLight.intensity = 0.7;
-      this.ambientLight.color.setHex(0xff8c70);
-      this.ambientLight.intensity = 0.45;
-      this.dirLight.color.setHex(0xff5436);
-      this.dirLight.intensity = 2.2;
-      this.dirLight.position.set(45, 12, 30);
-      this.renderer.toneMappingExposure = 1.1;
-      this.braziers.forEach(b => { b.intensity = 2.2; });
+      // Natural warm golden-amber dusk & twilight
+      this.scene.background = new THREE.Color(0xd48b55);
+      this.scene.fog = new THREE.FogExp2(0xd69e78, 0.013);
+      this.hemiLight.color.setHex(0xffc078);
+      this.hemiLight.groundColor.setHex(0x523824);
+      this.hemiLight.intensity = 0.85;
+      this.ambientLight.color.setHex(0xffd5a5);
+      this.ambientLight.intensity = 0.5;
+      this.dirLight.color.setHex(0xffa452);
+      this.dirLight.intensity = 2.3;
+      this.dirLight.position.set(42, 18, 25);
+      this.renderer.toneMappingExposure = 1.15;
+      this.braziers.forEach(b => { b.intensity = 1.2; });
     } else {
       // night
       this.scene.background = new THREE.Color(0x0a0f1d);

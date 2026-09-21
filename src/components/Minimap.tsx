@@ -22,13 +22,24 @@ export const Minimap: React.FC<MinimapProps> = ({
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const [hoveredExhibit, setHoveredExhibit] = useState<Exhibit | null>(null);
 
-  // Map coordinate range: -30 to +30 in 3D world maps to 0% - 100%
+  // Dynamically calculate coordinate bounds based on exhibit locations & count
+  let maxCoordDist = 22;
+  exhibits.forEach((ex) => {
+    if (ex && ex.position) {
+      const d = Math.max(Math.abs(ex.position[0]), Math.abs(ex.position[2]));
+      if (d > maxCoordDist) maxCoordDist = d;
+    }
+  });
+  const countRadius = Math.max(22, Math.sqrt(Math.max(1, exhibits.length)) * 10 + 8);
+  const mapBound = Math.max(28, maxCoordDist + 6, countRadius);
+
+  // Map coordinate range: -mapBound to +mapBound in 3D world maps to 0% - 100%
   const worldToMap = (x: number, z: number) => {
-    const minCoord = -28;
-    const maxCoord = 28;
+    const minCoord = -mapBound;
+    const maxCoord = mapBound;
     const mapX = ((x - minCoord) / (maxCoord - minCoord)) * 100;
     const mapY = ((z - minCoord) / (maxCoord - minCoord)) * 100;
-    return { left: `${Math.max(4, Math.min(96, mapX))}%`, top: `${Math.max(4, Math.min(96, mapY))}%` };
+    return { left: `${Math.max(3, Math.min(97, mapX))}%`, top: `${Math.max(3, Math.min(97, mapY))}%` };
   };
 
   const handleMapClick = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -36,8 +47,8 @@ export const Minimap: React.FC<MinimapProps> = ({
     const clickXPercent = (e.clientX - rect.left) / rect.width;
     const clickYPercent = (e.clientY - rect.top) / rect.height;
 
-    const minCoord = -28;
-    const maxCoord = 28;
+    const minCoord = -mapBound;
+    const maxCoord = mapBound;
     const worldX = minCoord + clickXPercent * (maxCoord - minCoord);
     const worldZ = minCoord + clickYPercent * (maxCoord - minCoord);
 
@@ -56,10 +67,10 @@ export const Minimap: React.FC<MinimapProps> = ({
             id="mobile-open-minimap-btn"
             onClick={() => setIsMobileOpen(true)}
             className="w-12 h-12 rounded-full bg-stone-950/90 border border-amber-500/50 text-amber-300 shadow-2xl backdrop-blur-md flex items-center justify-center active:scale-95 transition-transform"
-            title="Open Site Radar Map"
+            title="Saha Radar Haritasını Aç"
           >
             <Compass className="w-6 h-6 animate-spin-slow text-amber-400" />
-            <span className="sr-only">Open Radar Map</span>
+            <span className="sr-only">Radar Haritasını Aç</span>
           </button>
         )}
       </div>
@@ -79,14 +90,14 @@ export const Minimap: React.FC<MinimapProps> = ({
         <div className="flex items-center justify-between pb-2 border-b border-stone-800 text-stone-300">
           <div className="flex items-center gap-1.5 text-xs font-serif uppercase tracking-widest text-amber-300">
             <Compass className="w-3.5 h-3.5 text-amber-400 animate-spin-slow" />
-            <span>Site Survey Radar</span>
+            <span>Saha Keşif Radarı</span>
           </div>
           <div className="flex items-center gap-1">
             <button
               id="toggle-expand-minimap"
               onClick={() => setIsExpanded(!isExpanded)}
               className="p-1.5 hover:bg-stone-800 rounded text-stone-400 hover:text-amber-200 transition-colors"
-              title={isExpanded ? 'Collapse Radar' : 'Expand Survey Map'}
+              title={isExpanded ? 'Radarı Küçült' : 'Haritayı Genişlet'}
             >
               {isExpanded ? <Minimize2 className="w-3.5 h-3.5" /> : <Maximize2 className="w-3.5 h-3.5" />}
             </button>
@@ -96,7 +107,7 @@ export const Minimap: React.FC<MinimapProps> = ({
               id="mobile-close-minimap-btn"
               onClick={() => setIsMobileOpen(false)}
               className="sm:hidden p-1.5 hover:bg-stone-800 rounded text-stone-400 hover:text-amber-200 transition-colors"
-              title="Close Map"
+              title="Haritayı Kapat"
             >
               <X className="w-4 h-4" />
             </button>
@@ -127,7 +138,7 @@ export const Minimap: React.FC<MinimapProps> = ({
 
           {/* North Temple Ruins Outline */}
           <div className="absolute top-[8%] left-[30%] w-[40%] h-[12%] border border-stone-700 bg-stone-800/40 pointer-events-none flex items-center justify-center">
-            <span className="text-[8px] text-stone-400 font-serif">Sanctuary Relics</span>
+            <span className="text-[8px] text-stone-400 font-serif">Kutsal Alan Kalıntıları</span>
           </div>
 
           {/* Site Zone annotations when expanded */}
@@ -208,7 +219,7 @@ export const Minimap: React.FC<MinimapProps> = ({
               <span className="text-stone-400 text-[10px]">({hoveredExhibit.era})</span>
             </div>
           ) : (
-            <span className="text-stone-400 text-[10px]">Tap on map to teleport</span>
+            <span className="text-stone-400 text-[10px]">Işınlanmak için haritaya dokunun</span>
           )}
           <span className="text-[10px] text-stone-400 font-mono">
             X:{Math.round(playerState.x)} Z:{Math.round(playerState.z)}

@@ -55,22 +55,24 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
         <div className="min-w-0">
           <div className="flex items-center gap-1.5 sm:gap-2">
             <h1 className="font-serif font-bold text-xs sm:text-base tracking-wide text-amber-100 truncate">
-              Sanctuary of Samothrace
+              BBGNIGTH Türkiye
             </h1>
             {isCloudSynced && (
               <span
                 id="cloud-synced-indicator"
                 className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[9px] font-mono bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 shrink-0"
-                title="Synchronized live with Cloud Firestore"
+                title="Bulut Veritabanı ile Canlı Senkronize"
               >
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                <span className="hidden xs:inline">Live</span>
+                <span className="hidden xs:inline">Canlı</span>
               </span>
             )}
           </div>
-          <p className="text-[10px] font-serif tracking-widest text-stone-400 uppercase hidden sm:block">
-            {exhibitsCount} Masterpieces on Open-Air Plinths
-          </p>
+          {exhibitsCount > 0 && (
+            <p className="text-[10px] font-serif tracking-widest text-stone-400 uppercase hidden sm:block">
+              {exhibitsCount} Eser Kaidelerde Sergileniyor
+            </p>
+          )}
         </div>
       </div>
 
@@ -79,20 +81,6 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
         {/* Time of Day Segmented Control */}
         <div className="flex items-center bg-stone-900/90 rounded-xl p-0.5 border border-stone-800">
           <button
-            id="time-golden-hour-btn"
-            onClick={() => onTimeOfDayChange('golden_hour')}
-            className={`min-h-[36px] px-2 sm:px-2.5 py-1.5 rounded-lg text-xs flex items-center justify-center gap-1 transition-colors ${
-              timeOfDay === 'golden_hour'
-                ? 'bg-amber-500 text-stone-950 font-medium shadow'
-                : 'text-stone-400 hover:text-stone-200'
-            }`}
-            title="Golden Hour (Mediterranean Sun)"
-          >
-            <Sparkles className="w-3.5 h-3.5" />
-            <span className="hidden lg:inline text-[11px] font-serif">Golden</span>
-          </button>
-
-          <button
             id="time-day-btn"
             onClick={() => onTimeOfDayChange('day')}
             className={`min-h-[36px] px-2 sm:px-2.5 py-1.5 rounded-lg text-xs flex items-center justify-center gap-1 transition-colors ${
@@ -100,10 +88,10 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
                 ? 'bg-amber-500 text-stone-950 font-medium shadow'
                 : 'text-stone-400 hover:text-stone-200'
             }`}
-            title="Mediterranean High Noon"
+            title="Gündüz (Öğle Vakti)"
           >
             <Sun className="w-3.5 h-3.5" />
-            <span className="hidden lg:inline text-[11px] font-serif">Noon</span>
+            <span className="hidden lg:inline text-[11px] font-serif">Gündüz</span>
           </button>
 
           <button
@@ -114,10 +102,10 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
                 ? 'bg-amber-500 text-stone-950 font-medium shadow'
                 : 'text-stone-400 hover:text-stone-200'
             }`}
-            title="Sunset (Terracotta Crimson Sky)"
+            title="Gün Batımı (Kızıl Gökyüzü)"
           >
             <Sunset className="w-3.5 h-3.5" />
-            <span className="hidden lg:inline text-[11px] font-serif">Sunset</span>
+            <span className="hidden lg:inline text-[11px] font-serif">Gün Batımı</span>
           </button>
 
           <button
@@ -128,10 +116,10 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
                 ? 'bg-amber-500 text-stone-950 font-medium shadow'
                 : 'text-stone-400 hover:text-stone-200'
             }`}
-            title="Starlit Night & Fire Braziers"
+            title="Gece & Yıldızlar ve Meşaleler"
           >
             <Moon className="w-3.5 h-3.5" />
-            <span className="hidden lg:inline text-[11px] font-serif">Night</span>
+            <span className="hidden lg:inline text-[11px] font-serif">Gece</span>
           </button>
         </div>
 
@@ -145,10 +133,10 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
                 ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40 font-serif'
                 : 'text-stone-400 hover:text-stone-200'
             }`}
-            title="First-Person Walk Navigation"
+            title="Birinci Şahıs Yürüme Modu"
           >
             <Footprints className="w-3.5 h-3.5 text-amber-400" />
-            <span className="hidden sm:inline text-xs font-serif">Walk</span>
+            <span className="hidden sm:inline text-xs font-serif">Yürü</span>
           </button>
 
           <button
@@ -159,10 +147,10 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
                 ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40 font-serif'
                 : 'text-stone-400 hover:text-stone-200'
             }`}
-            title="Orbit Drone View"
+            title="Kuşbakışı / Yörünge Dron Görünümü"
           >
             <Orbit className="w-3.5 h-3.5 text-amber-400" />
-            <span className="hidden sm:inline text-xs font-serif">Orbit</span>
+            <span className="hidden sm:inline text-xs font-serif">Yörünge</span>
           </button>
         </div>
       </div>
@@ -178,10 +166,10 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
               ? 'bg-amber-500 text-stone-950 font-bold border-amber-400 animate-pulse'
               : 'bg-stone-900/90 text-stone-300 hover:text-amber-200 border-stone-800'
           }`}
-          title={isTouring ? 'Stop Tour' : 'Start Guided Virtual Tour'}
+          title={isTouring ? 'Turu Durdur' : 'Rehberli Sanal Turu Başlat'}
         >
           {isTouring ? <Pause className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5 fill-current" />}
-          <span className="hidden md:inline">Tour</span>
+          <span className="hidden md:inline">Tur</span>
         </button>
 
         {/* Audio Mute/Unmute */}
@@ -189,7 +177,7 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
           id="header-audio-toggle-btn"
           onClick={onToggleAudio}
           className="min-h-[36px] min-w-[36px] p-2 rounded-xl bg-stone-900/90 border border-stone-800 text-stone-300 hover:text-amber-300 transition-colors flex items-center justify-center active:scale-95"
-          title={isAudioMuted ? 'Unmute Ambient Soundscape' : 'Mute Soundscape'}
+          title={isAudioMuted ? 'Ortam Sesini Aç' : 'Ortam Sesini Kapat'}
         >
           {isAudioMuted ? <VolumeX className="w-4 h-4 text-stone-500" /> : <Volume2 className="w-4 h-4 text-amber-400" />}
         </button>
@@ -199,10 +187,10 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
           id="header-admin-studio-btn"
           onClick={onOpenAdmin}
           className="min-h-[36px] px-2.5 sm:px-3 py-1.5 rounded-xl bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-500 hover:to-amber-600 text-stone-950 font-serif font-bold text-xs flex items-center justify-center gap-1.5 shadow-md transition-all active:scale-95"
-          title="Open Admin Photo & Exhibit Manager"
+          title="Yönetici Fotoğraf ve Eser Düzenleme Paneli"
         >
           <Lock className="w-3.5 h-3.5" />
-          <span className="hidden sm:inline">Admin</span>
+          <span className="hidden sm:inline">Yönetim</span>
         </button>
       </div>
     </header>

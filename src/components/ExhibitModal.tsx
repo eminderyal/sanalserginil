@@ -105,11 +105,14 @@ export const ExhibitModal: React.FC<ExhibitModalProps> = ({
         <div className="p-3.5 sm:p-5 border-b border-stone-800 flex items-center justify-between bg-stone-900/50 shrink-0">
           <div className="flex items-center gap-2 min-w-0">
             <span className="text-xs uppercase tracking-widest text-amber-400 font-serif font-semibold truncate">
-              Exhibit {currentIndex + 1} of {allExhibits.length}
+              Eser {currentIndex + 1} / {allExhibits.length}
             </span>
             <span className="text-stone-600 hidden xs:inline">•</span>
             <span className="text-xs text-stone-400 font-mono capitalize hidden xs:inline truncate">
-              {exhibit.frameStyle.replace('_', ' ')}
+              {exhibit.frameStyle === 'stone_pedestal' ? 'Mermer Kaide' :
+               exhibit.frameStyle === 'glass_vitrine' ? 'Cam Vitrin' :
+               exhibit.frameStyle === 'bronze_stela' ? 'Bronz Dikilitaş' :
+               exhibit.frameStyle === 'obsidian_monolith' ? 'Obsidyen Monolit' : 'Stand'}
             </span>
           </div>
 
@@ -118,17 +121,17 @@ export const ExhibitModal: React.FC<ExhibitModalProps> = ({
               id="exhibit-teleport-cam-btn"
               onClick={() => onFocus3D(exhibit)}
               className="min-h-[38px] px-2.5 py-1.5 rounded-lg bg-stone-800/80 hover:bg-amber-600/30 text-amber-300 text-xs font-sans flex items-center gap-1.5 border border-stone-700/60 transition-colors active:scale-95"
-              title="Focus 3D camera onto this plinth"
+              title="3D kamerayı bu kaideye odakla"
             >
               <Compass className="w-3.5 h-3.5" />
-              <span className="hidden xs:inline">Center View</span>
+              <span className="hidden xs:inline">Görünümü Ortala</span>
             </button>
 
             <button
               id="close-exhibit-modal-btn"
               onClick={onClose}
               className="min-h-[38px] min-w-[38px] p-2 rounded-lg text-stone-400 hover:text-white hover:bg-stone-800 transition-colors flex items-center justify-center active:scale-95"
-              title="Close panel"
+              title="Paneli kapat"
             >
               <X className="w-5 h-5" />
             </button>
@@ -153,12 +156,12 @@ export const ExhibitModal: React.FC<ExhibitModalProps> = ({
               className="absolute bottom-3 right-3 p-2 rounded-lg bg-stone-900/80 text-amber-300 hover:bg-stone-900 border border-stone-700/60 transition-transform active:scale-95 flex items-center gap-1 text-xs"
             >
               <ZoomIn className="w-4 h-4" />
-              <span>Inspect High-Res</span>
+              <span>Yüksek Çözünürlükte İncele</span>
             </button>
 
             {/* Frame Badge */}
             <div className="absolute top-3 left-3 px-2.5 py-1 rounded-md bg-stone-950/80 text-[11px] font-serif text-stone-300 border border-stone-800 backdrop-blur-sm">
-              Classical Plinth Stand
+              Klasik Arkeolojik Kaide
             </div>
           </div>
 
@@ -197,10 +200,10 @@ export const ExhibitModal: React.FC<ExhibitModalProps> = ({
               </button>
               <div>
                 <p className="text-xs font-serif font-semibold text-amber-200 uppercase tracking-wider">
-                  {isPlayingAudio ? 'Narration Active' : 'Curator Audio Guide'}
+                  {isPlayingAudio ? 'Sesli Rehber Çalıyor' : 'Küratör Sesli Rehberi'}
                 </p>
                 <p className="text-[11px] text-stone-400 font-sans">
-                  {isPlayingAudio ? 'Listening to archaeological notes...' : 'Listen to voice narration'}
+                  {isPlayingAudio ? 'Arkeolojik açıklamalar dinleniyor...' : 'Sesli anlatımı dinlemek için tıklayın'}
                 </p>
               </div>
             </div>
@@ -224,7 +227,7 @@ export const ExhibitModal: React.FC<ExhibitModalProps> = ({
             <div className="p-3 rounded-lg bg-stone-900/70 border border-stone-800 flex items-start gap-2.5">
               <Calendar className="w-4 h-4 text-amber-400 mt-0.5 shrink-0" />
               <div>
-                <span className="text-[10px] uppercase font-mono text-stone-400 block">Era / Period</span>
+                <span className="text-[10px] uppercase font-mono text-stone-400 block">Dönem / Çağ</span>
                 <span className="text-xs font-serif text-stone-200 font-medium">{exhibit.era}</span>
               </div>
             </div>
@@ -232,7 +235,7 @@ export const ExhibitModal: React.FC<ExhibitModalProps> = ({
             <div className="p-3 rounded-lg bg-stone-900/70 border border-stone-800 flex items-start gap-2.5">
               <MapPin className="w-4 h-4 text-amber-400 mt-0.5 shrink-0" />
               <div>
-                <span className="text-[10px] uppercase font-mono text-stone-400 block">Provenance</span>
+                <span className="text-[10px] uppercase font-mono text-stone-400 block">Köken / Buluntu Yeri</span>
                 <span className="text-xs font-serif text-stone-200 font-medium truncate block">
                   {exhibit.provenance}
                 </span>
@@ -242,7 +245,7 @@ export const ExhibitModal: React.FC<ExhibitModalProps> = ({
             <div className="p-3 rounded-lg bg-stone-900/70 border border-stone-800 flex items-start gap-2.5">
               <Sparkles className="w-4 h-4 text-amber-400 mt-0.5 shrink-0" />
               <div>
-                <span className="text-[10px] uppercase font-mono text-stone-400 block">Material</span>
+                <span className="text-[10px] uppercase font-mono text-stone-400 block">Malzeme / Materyal</span>
                 <span className="text-xs font-serif text-stone-200 font-medium">{exhibit.material}</span>
               </div>
             </div>
@@ -251,7 +254,7 @@ export const ExhibitModal: React.FC<ExhibitModalProps> = ({
               <div className="p-3 rounded-lg bg-stone-900/70 border border-stone-800 flex items-start gap-2.5">
                 <Layers className="w-4 h-4 text-amber-400 mt-0.5 shrink-0" />
                 <div>
-                  <span className="text-[10px] uppercase font-mono text-stone-400 block">Dimensions</span>
+                  <span className="text-[10px] uppercase font-mono text-stone-400 block">Boyutlar</span>
                   <span className="text-xs font-serif text-stone-200 font-medium">{exhibit.dimensions}</span>
                 </div>
               </div>
@@ -261,7 +264,7 @@ export const ExhibitModal: React.FC<ExhibitModalProps> = ({
           {/* Description Section */}
           <div className="space-y-2">
             <h3 className="text-xs font-mono uppercase tracking-widest text-amber-300/80">
-              Archaeological Context
+              Arkeolojik Bağlam ve Tarihçe
             </h3>
             <p className="text-sm font-sans text-stone-300 leading-relaxed">
               {exhibit.description}
@@ -273,7 +276,7 @@ export const ExhibitModal: React.FC<ExhibitModalProps> = ({
             <div className="p-4 rounded-xl bg-stone-900/40 border-l-2 border-amber-500 border-t border-r border-b border-stone-800/60">
               <h4 className="text-xs font-serif font-semibold text-amber-200 mb-1 flex items-center gap-1.5">
                 <Eye className="w-3.5 h-3.5 text-amber-400" />
-                <span>Excavation & Conservation Notes</span>
+                <span>Kazı ve Restorasyon Notları</span>
               </h4>
               <p className="text-xs font-sans text-stone-400 leading-normal">
                 {exhibit.curatorNotes}
@@ -309,7 +312,7 @@ export const ExhibitModal: React.FC<ExhibitModalProps> = ({
             }`}
           >
             <ChevronLeft className="w-4 h-4" />
-            <span>Previous</span>
+            <span>Önceki</span>
           </button>
 
           <button
@@ -322,7 +325,7 @@ export const ExhibitModal: React.FC<ExhibitModalProps> = ({
                 : 'opacity-40 cursor-not-allowed bg-stone-900 text-stone-500 border-stone-800'
             }`}
           >
-            <span>Next</span>
+            <span>Sonraki</span>
             <ChevronRight className="w-4 h-4" />
           </button>
         </div>

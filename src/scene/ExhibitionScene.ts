@@ -24,7 +24,8 @@ export class ExhibitionScene {
 
   // Camera & Navigation State
   private cameraMode: CameraMode = 'first_person';
-  private timeOfDay: TimeOfDay = 'golden_hour';
+  private timeOfDay: TimeOfDay = 'night';
+  private siteRadius = 26;
 
   // First-Person Walk Controls
   private playerPos = new THREE.Vector3(0, 1.7, 12);
@@ -161,7 +162,32 @@ export class ExhibitionScene {
     this.animate();
   }
 
+  private calculateSiteRadius(exhibits: Exhibit[]): number {
+    let maxDist = 20;
+    exhibits.forEach((ex) => {
+      if (ex && ex.position) {
+        const dist = Math.hypot(ex.position[0], ex.position[2]);
+        if (dist > maxDist) maxDist = dist;
+      }
+    });
+    // Scale dynamically with exhibit count (guarantees spaciousness as more artifacts are added)
+    const countRadius = Math.max(24, Math.sqrt(Math.max(1, exhibits.length)) * 10 + 10);
+    return Math.max(26, maxDist + 12, countRadius);
+  }
+
   public updateExhibits(exhibits: Exhibit[]) {
+    // Dynamically calculate the required sanctuary size to host all artifacts
+    this.siteRadius = this.calculateSiteRadius(exhibits);
+    this.siteBuilder.updateSiteSize(this.siteRadius);
+
+    // Update shadow map boundaries so the extended area receives clean shadows
+    const shadowBound = Math.max(35, this.siteRadius + 15);
+    this.dirLight.shadow.camera.left = -shadowBound;
+    this.dirLight.shadow.camera.right = shadowBound;
+    this.dirLight.shadow.camera.top = shadowBound;
+    this.dirLight.shadow.camera.bottom = -shadowBound;
+    this.dirLight.shadow.camera.updateProjectionMatrix();
+
     // Clear existing plinths
     while (this.plinthsGroup.children.length > 0) {
       const obj = this.plinthsGroup.children[0];
@@ -195,19 +221,6 @@ export class ExhibitionScene {
       this.dirLight.position.set(15, 55, 10);
       this.renderer.toneMappingExposure = 1.15;
       this.braziers.forEach(b => { b.intensity = 0.3; });
-    } else if (time === 'golden_hour') {
-      this.scene.background = new THREE.Color(0xf6bd60);
-      this.scene.fog = new THREE.FogExp2(0xedd1b0, 0.016);
-      this.hemiLight.color.setHex(0xffd166);
-      this.hemiLight.groundColor.setHex(0x7f5539);
-      this.hemiLight.intensity = 0.9;
-      this.ambientLight.color.setHex(0xffcca0);
-      this.ambientLight.intensity = 0.6;
-      this.dirLight.color.setHex(0xffa834);
-      this.dirLight.intensity = 2.8;
-      this.dirLight.position.set(38, 22, 25);
-      this.renderer.toneMappingExposure = 1.25;
-      this.braziers.forEach(b => { b.intensity = 1.0; });
     } else if (time === 'sunset') {
       this.scene.background = new THREE.Color(0xc94c4c);
       this.scene.fog = new THREE.FogExp2(0x9b4b57, 0.02);
@@ -368,7 +381,8 @@ export class ExhibitionScene {
   private handleWheel = (e: WheelEvent) => {
     if (this.cameraMode === 'orbit') {
       e.preventDefault();
-      this.orbitDistance = Math.max(8, Math.min(60, this.orbitDistance + e.deltaY * 0.03));
+      const maxOrbit = Math.max(65, this.siteRadius * 2.2);
+      this.orbitDistance = Math.max(8, Math.min(maxOrbit, this.orbitDistance + e.deltaY * 0.03));
       this.updateOrbitCamera();
     }
   };
@@ -560,8 +574,8 @@ export class ExhibitionScene {
 
       this.playerPos.add(displacement);
 
-      // Clamp player within archaeological site boundary
-      const maxSiteDist = 26;
+      // Clamp player within dynamic archaeological site boundary
+      const maxSiteDist = Math.max(26, this.siteRadius - 1.5);
       this.playerPos.x = Math.max(-maxSiteDist, Math.min(maxSiteDist, this.playerPos.x));
       this.playerPos.z = Math.max(-maxSiteDist, Math.min(maxSiteDist, this.playerPos.z));
       this.playerPos.y = 1.7;

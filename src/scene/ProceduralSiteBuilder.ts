@@ -3,6 +3,11 @@ import * as THREE from 'three';
 export class ProceduralSiteBuilder {
   private materials: { [key: string]: THREE.Material } = {};
   private textures: { [key: string]: THREE.Texture } = {};
+  private terrainMesh: THREE.Mesh | null = null;
+  private agoraMesh: THREE.Mesh | null = null;
+  private baseStepMesh: THREE.Mesh | null = null;
+  private colonnadeGroup: THREE.Group | null = null;
+  private currentSiteRadius = 24;
 
   constructor() {
     this.initTexturesAndMaterials();
@@ -170,6 +175,7 @@ export class ProceduralSiteBuilder {
     terrainMesh.position.y = -0.05;
     terrainMesh.receiveShadow = true;
     siteGroup.add(terrainMesh);
+    this.terrainMesh = terrainMesh;
 
     // 2. Central Sanctuary Agora (Paved Stone Terrace)
     const agoraGeo = new THREE.BoxGeometry(44, 0.4, 44);
@@ -178,6 +184,7 @@ export class ProceduralSiteBuilder {
     agoraMesh.receiveShadow = true;
     agoraMesh.castShadow = true;
     siteGroup.add(agoraMesh);
+    this.agoraMesh = agoraMesh;
 
     // Agora Stepped Foundation Plinth
     const baseStepGeo = new THREE.BoxGeometry(46.5, 0.25, 46.5);
@@ -185,9 +192,12 @@ export class ProceduralSiteBuilder {
     baseStepMesh.position.set(0, 0.05, 0);
     baseStepMesh.receiveShadow = true;
     siteGroup.add(baseStepMesh);
+    this.baseStepMesh = baseStepMesh;
 
     // 3. Classical Colonnades (Perimeter Doric & Ionic Columns)
-    this.buildColonnades(siteGroup);
+    this.colonnadeGroup = new THREE.Group();
+    siteGroup.add(this.colonnadeGroup);
+    this.buildColonnades(this.colonnadeGroup);
 
     // 4. Ruined Temples, Steps, and Porticos
     this.buildTempleRuins(siteGroup);
@@ -204,6 +214,34 @@ export class ProceduralSiteBuilder {
     scene.add(siteGroup);
 
     return { braziers, particles };
+  }
+
+  /**
+   * Dynamically extends the sanctuary ground, agora terrace, steps and landscape
+   * when many artifacts are placed or placed further out in the 3D world.
+   */
+  public updateSiteSize(siteRadius: number) {
+    this.currentSiteRadius = Math.max(24, siteRadius);
+    const agoraSize = Math.max(48, this.currentSiteRadius * 2 + 16);
+
+    if (this.agoraMesh) {
+      this.agoraMesh.scale.set(agoraSize / 44, 1, agoraSize / 44);
+      const stoneTex = this.textures['stone_pavers'];
+      if (stoneTex) {
+        stoneTex.repeat.set(Math.round(agoraSize / 2.75), Math.round(agoraSize / 2.75));
+        stoneTex.needsUpdate = true;
+      }
+    }
+
+    if (this.baseStepMesh) {
+      const stepSize = agoraSize + 3;
+      this.baseStepMesh.scale.set(stepSize / 46.5, 1, stepSize / 46.5);
+    }
+
+    if (this.terrainMesh) {
+      const terrainSize = Math.max(320, agoraSize * 3.5);
+      this.terrainMesh.scale.set(terrainSize / 240, terrainSize / 240, 1);
+    }
   }
 
   private buildColonnades(group: THREE.Group) {

@@ -1,6 +1,6 @@
 export type DisplayFrameStyle = 'stone_pedestal' | 'glass_vitrine' | 'bronze_stela' | 'obsidian_monolith';
 
-export type TimeOfDay = 'day' | 'golden_hour' | 'sunset' | 'night';
+export type TimeOfDay = 'day' | 'sunset' | 'night';
 
 export type CameraMode = 'first_person' | 'orbit' | 'tour';
 

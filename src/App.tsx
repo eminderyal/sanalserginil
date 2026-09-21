@@ -18,19 +18,26 @@ export default function App() {
       const saved = localStorage.getItem('archaeo_exhibits_data');
       if (saved) {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          return parsed;
+        if (Array.isArray(parsed)) {
+          // Filter out default mock artifacts if any existed from earlier sessions
+          const userOnly = parsed.filter(
+            (e) => e && e.id && !e.id.startsWith('exhibit-1') && !e.id.startsWith('exhibit-2') &&
+                   !e.id.startsWith('exhibit-3') && !e.id.startsWith('exhibit-4') &&
+                   !e.id.startsWith('exhibit-5') && !e.id.startsWith('exhibit-6') &&
+                   !e.id.startsWith('exhibit-7') && !e.id.startsWith('exhibit-8')
+          );
+          return userOnly;
         }
       }
     } catch {
       // Fallback
     }
-    return DEFAULT_EXHIBITS;
+    return [];
   });
 
   const [selectedExhibit, setSelectedExhibit] = useState<Exhibit | null>(null);
   const [hoveredExhibit, setHoveredExhibit] = useState<Exhibit | null>(null);
-  const [timeOfDay, setTimeOfDay] = useState<TimeOfDay>('golden_hour');
+  const [timeOfDay, setTimeOfDay] = useState<TimeOfDay>('night');
   const [cameraMode, setCameraMode] = useState<CameraMode>('first_person');
   const [playerState, setPlayerState] = useState<PlayerState>({ x: 0, z: 12, rotationY: 0 });
   const [isAdminOpen, setIsAdminOpen] = useState(false);
@@ -45,14 +52,17 @@ export default function App() {
   useEffect(() => {
     const unsubscribe = subscribeToExhibits(
       (cloudExhibits) => {
-        if (cloudExhibits && cloudExhibits.length > 0) {
-          setExhibits(cloudExhibits);
-          setIsCloudSynced(true);
-          try {
-            localStorage.setItem('archaeo_exhibits_data', JSON.stringify(cloudExhibits));
-          } catch (e) {
-            console.warn('Failed to cache exhibits locally', e);
-          }
+        const list = Array.isArray(cloudExhibits) ? cloudExhibits : [];
+        // Filter out legacy mock artifacts if any are present
+        const filtered = list.filter(
+          (e) => e && e.id && !['exhibit-1','exhibit-2','exhibit-3','exhibit-4','exhibit-5','exhibit-6','exhibit-7','exhibit-8'].includes(e.id)
+        );
+        setExhibits(filtered);
+        setIsCloudSynced(true);
+        try {
+          localStorage.setItem('archaeo_exhibits_data', JSON.stringify(filtered));
+        } catch (e) {
+          console.warn('Failed to cache exhibits locally', e);
         }
       },
       (error) => {
@@ -209,7 +219,7 @@ export default function App() {
           <span className="w-2 h-2 rounded-full bg-amber-400 animate-ping" />
           <span className="text-xs font-serif font-semibold">{hoveredExhibit.title}</span>
           <span className="text-[11px] text-stone-400 font-sans">({hoveredExhibit.era})</span>
-          <span className="text-[10px] text-amber-400/80 uppercase font-mono ml-1">Click to Inspect</span>
+          <span className="text-[10px] text-amber-400/80 uppercase font-mono ml-1">İncelemek için Tıkla</span>
         </div>
       )}
 

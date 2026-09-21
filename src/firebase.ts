@@ -25,7 +25,6 @@ const EXHIBITS_COLLECTION = 'exhibits';
 
 /**
  * Subscribe to real-time updates of all exhibition artifacts in Firestore.
- * If the collection is empty on first boot, seed it with DEFAULT_EXHIBITS.
  */
 export function subscribeToExhibits(
   onExhibitsUpdated: (exhibits: Exhibit[]) => void,
@@ -36,11 +35,9 @@ export function subscribeToExhibits(
   // Set up real-time listener
   const unsubscribe = onSnapshot(
     exhibitsRef,
-    async (snapshot) => {
+    (snapshot) => {
       if (snapshot.empty) {
-        // First-time database initialization: seed with default exhibits
-        console.log('Seeding initial archaeological exhibits to Firestore...');
-        await seedDefaultExhibits();
+        onExhibitsUpdated([]);
         return;
       }
 
@@ -67,19 +64,10 @@ export function subscribeToExhibits(
 }
 
 /**
- * Seed the initial exhibition data if the cloud collection is empty
+ * Seed the initial exhibition data if the cloud collection is empty (no-op when empty)
  */
 export async function seedDefaultExhibits() {
-  try {
-    const batch = writeBatch(db);
-    for (const exhibit of DEFAULT_EXHIBITS) {
-      const docRef = doc(db, EXHIBITS_COLLECTION, exhibit.id);
-      batch.set(docRef, exhibit);
-    }
-    await batch.commit();
-  } catch (err) {
-    console.error('Failed to seed default exhibits to Firestore:', err);
-  }
+  // No mock artifacts by default
 }
 
 /**

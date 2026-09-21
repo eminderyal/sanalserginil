@@ -1,6 +1,6 @@
 {
-  "name": "Archaeological 3D Virtual Exhibition",
-  "description": "An interactive 3D open-air archaeological virtual exhibition exploring ancient Mediterranean ruins, interactive artifact plinths, first-person navigation, and administrative photo curation.",
+  "name": "BBGNIGTH Türkiye",
+  "description": "BBGNIGTH Türkiye - Açık hava arkeolojik 3D sanal sergi, antik kalıntılar, etkileşimli eser kaideleri ve küratör yönetim stüdyosu.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

@@ -79,39 +79,40 @@ export const AdminModal: React.FC<AdminModalProps> = ({
       setIsAuthenticated(true);
       localStorage.setItem('archaeo_admin_token', 'true');
       setAuthError('');
-      showNotification('Curator access authorized');
+      showNotification('Küratör girişi başarılı');
     } else {
-      setAuthError('Invalid password. Please enter the curator password.');
+      setAuthError('Geçersiz şifre. Lütfen küratör şifresini girin.');
     }
   };
 
   const handleLogout = () => {
     setIsAuthenticated(false);
     localStorage.removeItem('archaeo_admin_token');
-    showNotification('Curator logged out');
+    showNotification('Küratör oturumu kapatıldı');
   };
 
   const startCreateNew = () => {
     setEditingExhibitId(null);
     setFormTitle('');
     setFormSubtitle('');
-    setFormEra('c. 450 BCE (Classical Period)');
-    setFormProvenance('Ancient Mediterranean Basin');
-    setFormMaterial('Carved Marble / Bronze');
-    setFormDimensions('1.8 m × 0.9 m');
-    setFormDescription('Excavated archaeological artifact showcasing classical Mediterranean craftsmanship.');
-    setFormCuratorNotes('Discovered during archaeological stratigraphy surveys.');
-    setFormImageUrl('https://images.unsplash.com/photo-1544967082-d9d25d867d66?auto=format&fit=crop&w=1200&q=80');
+    setFormEra('');
+    setFormProvenance('');
+    setFormMaterial('');
+    setFormDimensions('');
+    setFormDescription('');
+    setFormCuratorNotes('');
+    setFormImageUrl('');
     setFormFrameStyle('stone_pedestal');
     
-    // Auto find an unoccupied spot around the forum
+    // Auto find an open spot with spiral expansion around the sanctuary forum
     const count = exhibits.length;
-    const angle = (count * (Math.PI * 2)) / 10;
-    const dist = 10 + (count % 3) * 4;
-    setFormPosX(Math.round(Math.sin(angle) * dist));
-    setFormPosZ(Math.round(Math.cos(angle) * dist));
+    const ring = Math.floor(count / 8);
+    const angle = (count * (Math.PI * 2)) / 8 + ring * 0.4;
+    const dist = 7 + ring * 6 + (count % 3) * 1.5;
+    setFormPosX(Math.round(Math.sin(angle) * dist * 10) / 10);
+    setFormPosZ(Math.round(Math.cos(angle) * dist * 10) / 10);
     setFormRotationY(Math.round((angle + Math.PI) * 100) / 100);
-    setFormTags('Archaeology, Artifact, Classical');
+    setFormTags('');
     setFormAudioText('');
     setActiveTab('editor');
   };
@@ -141,7 +142,7 @@ export const AdminModal: React.FC<AdminModalProps> = ({
     if (!file) return;
 
     if (!file.type.startsWith('image/')) {
-      showNotification('Please select a valid image file', 'error');
+      showNotification('Lütfen geçerli bir görsel dosyası seçin', 'error');
       return;
     }
 
@@ -172,15 +173,15 @@ export const AdminModal: React.FC<AdminModalProps> = ({
           ctx.drawImage(img, 0, 0, w, h);
           const optimizedDataUrl = canvas.toDataURL('image/jpeg', 0.85);
           setFormImageUrl(optimizedDataUrl);
-          showNotification('Photo uploaded & optimized for 3D exhibition');
+          showNotification('Fotoğraf yüklendi ve 3D sergi için optimize edildi');
         } else {
           setFormImageUrl(dataUrl);
-          showNotification('Photo uploaded successfully');
+          showNotification('Fotoğraf başarıyla yüklendi');
         }
       };
       img.onerror = () => {
         setFormImageUrl(dataUrl);
-        showNotification('Photo uploaded successfully');
+        showNotification('Fotoğraf başarıyla yüklendi');
       };
       img.src = dataUrl;
     };
@@ -190,11 +191,11 @@ export const AdminModal: React.FC<AdminModalProps> = ({
   const handleSaveForm = (e: React.FormEvent) => {
     e.preventDefault();
     if (!formTitle.trim()) {
-      showNotification('Please enter an exhibit title', 'error');
+      showNotification('Lütfen eser başlığı girin', 'error');
       return;
     }
     if (!formImageUrl.trim()) {
-      showNotification('Please provide an image URL or upload a file', 'error');
+      showNotification('Lütfen bir görsel URLsi girin veya fotoğraf yükleyin', 'error');
       return;
     }
 
@@ -229,19 +230,19 @@ export const AdminModal: React.FC<AdminModalProps> = ({
         }
         return ex;
       });
-      showNotification(`Exhibit "${formTitle}" updated!`);
+      showNotification(`"${formTitle}" eseri güncellendi!`);
     } else {
       // Create new
       const newExhibit: Exhibit = {
         id: `exhibit-user-${Date.now()}`,
         title: formTitle,
-        subtitle: formSubtitle,
-        era: formEra || 'Ancient Era',
-        provenance: formProvenance || 'Excavation Site',
-        material: formMaterial || 'Limestone',
-        dimensions: formDimensions,
-        description: formDescription,
-        curatorNotes: formCuratorNotes,
+        subtitle: formSubtitle || '',
+        era: formEra || '',
+        provenance: formProvenance || '',
+        material: formMaterial || '',
+        dimensions: formDimensions || '',
+        description: formDescription || '',
+        curatorNotes: formCuratorNotes || '',
         imageUrl: formImageUrl,
         frameStyle: formFrameStyle,
         position: [formPosX, 0, formPosZ],
@@ -251,7 +252,7 @@ export const AdminModal: React.FC<AdminModalProps> = ({
         audioGuideText: formAudioText || undefined,
       };
       updatedList = [newExhibit, ...exhibits];
-      showNotification(`New exhibit "${formTitle}" created in 3D exhibition!`);
+      showNotification(`"${formTitle}" eseri 3D sergide oluşturuldu!`);
     }
 
     onSaveExhibits(updatedList);
@@ -259,10 +260,17 @@ export const AdminModal: React.FC<AdminModalProps> = ({
   };
 
   const handleDelete = (id: string, title: string) => {
-    if (window.confirm(`Are you sure you want to remove "${title}" from the exhibition?`)) {
+    if (window.confirm(`"${title}" eserini sergiden kaldırmak istediğinize emin misiniz?`)) {
       const filtered = exhibits.filter((ex) => ex.id !== id);
       onSaveExhibits(filtered);
-      showNotification(`Exhibit removed.`);
+      showNotification(`Eser kaldırıldı.`);
+    }
+  };
+
+  const handleClearAll = () => {
+    if (window.confirm('Tüm eserleri sergiden temizlemek istediğinize emin misiniz?')) {
+      onSaveExhibits([]);
+      showNotification('Tüm eserler temizlendi.');
     }
   };
 
@@ -272,10 +280,10 @@ export const AdminModal: React.FC<AdminModalProps> = ({
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = `archaeological_exhibition_manifest_${new Date().toISOString().slice(0, 10)}.json`;
+    link.download = `arkeolojik_sergi_manifest_${new Date().toISOString().slice(0, 10)}.json`;
     link.click();
     URL.revokeObjectURL(url);
-    showNotification('Exhibition manifest JSON downloaded');
+    showNotification('Sergi manifestosu JSON olarak indirildi');
   };
 
   const handleImportJSON = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -287,20 +295,13 @@ export const AdminModal: React.FC<AdminModalProps> = ({
         const parsed = JSON.parse(evt.target?.result as string);
         if (Array.isArray(parsed)) {
           onSaveExhibits(parsed);
-          showNotification(`Imported ${parsed.length} exhibits successfully!`);
+          showNotification(`${parsed.length} eser başarıyla içe aktarıldı!`);
         }
       } catch {
-        showNotification('Invalid JSON file', 'error');
+        showNotification('Geçersiz JSON dosyası', 'error');
       }
     };
     reader.readAsText(file);
-  };
-
-  const handleResetDefaults = () => {
-    if (window.confirm('Reset the exhibition to the default curated historical collection?')) {
-      onSaveExhibits(DEFAULT_EXHIBITS);
-      showNotification('Exhibition reset to default curated collection.');
-    }
   };
 
   return (
@@ -320,10 +321,10 @@ export const AdminModal: React.FC<AdminModalProps> = ({
             </div>
             <div>
               <h3 className="font-serif font-bold text-lg text-amber-200">
-                Curator Administration & Exhibition Studio
+                Küratör Yönetimi & Sergi Stüdyosu
               </h3>
               <p className="text-xs text-stone-400 font-sans">
-                Manage 3D plinths, photos, and archaeological metadata
+                3D kaideleri, fotoğrafları ve arkeolojik üstverileri yönetin
               </p>
             </div>
           </div>
@@ -336,7 +337,7 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                 className="px-2.5 py-1.5 rounded-lg text-xs font-sans text-stone-400 hover:text-stone-200 hover:bg-stone-800 border border-stone-800 flex items-center gap-1.5"
               >
                 <Unlock className="w-3.5 h-3.5" />
-                <span>Logout</span>
+                <span>Çıkış Yap</span>
               </button>
             )}
             <button
@@ -377,10 +378,10 @@ export const AdminModal: React.FC<AdminModalProps> = ({
 
             <div>
               <h4 className="text-xl font-serif font-semibold text-stone-200">
-                Curator Portal Authentication
+                Küratör Giriş Portalı
               </h4>
               <p className="text-xs text-stone-400 mt-1 font-sans">
-                Sign in to upload custom photos, place 3D plinths, and curate artifacts.
+                Özel fotoğraf yüklemek, 3D kaideler yerleştirmek ve eserleri düzenlemek için giriş yapın.
               </p>
             </div>
 
@@ -389,7 +390,7 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                 <input
                   id="admin-password-input"
                   type="password"
-                  placeholder="Enter curator password"
+                  placeholder="Küratör şifresini girin"
                   value={passwordInput}
                   onChange={(e) => setPasswordInput(e.target.value)}
                   className="w-full px-4 py-2.5 rounded-xl bg-stone-900 border border-stone-700 text-stone-100 placeholder-stone-500 text-sm focus:outline-none focus:border-amber-500"
@@ -404,7 +405,7 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                 type="submit"
                 className="w-full py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-stone-950 font-serif font-bold text-sm transition-colors shadow-lg"
               >
-                Enter Curator Studio
+                Küratör Stüdyosuna Giriş Yap
               </button>
             </form>
           </div>
@@ -423,7 +424,7 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                       : 'bg-stone-900 text-stone-400 hover:text-stone-200'
                   }`}
                 >
-                  Exhibition Inventory ({exhibits.length})
+                  Sergi Envanteri ({exhibits.length})
                 </button>
                 <button
                   id="admin-tab-editor-btn"
@@ -435,7 +436,7 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                   }`}
                 >
                   <Plus className="w-3.5 h-3.5" />
-                  <span>Upload New Artifact</span>
+                  <span>Yeni Eser Ekle</span>
                 </button>
               </div>
 
@@ -445,10 +446,10 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                   id="export-exhibits-json-btn"
                   onClick={handleExportJSON}
                   className="px-2.5 py-1.5 rounded-lg bg-stone-900 hover:bg-stone-800 text-stone-300 text-xs font-sans border border-stone-800 flex items-center gap-1"
-                  title="Download exhibition manifest as JSON"
+                  title="Sergi manifestosunu JSON olarak indir"
                 >
                   <Download className="w-3.5 h-3.5" />
-                  <span>Export Manifest</span>
+                  <span>JSON Dışa Aktar</span>
                 </button>
 
                 <label
@@ -456,7 +457,7 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                   className="px-2.5 py-1.5 rounded-lg bg-stone-900 hover:bg-stone-800 text-stone-300 text-xs font-sans border border-stone-800 flex items-center gap-1 cursor-pointer"
                 >
                   <Upload className="w-3.5 h-3.5" />
-                  <span>Import JSON</span>
+                  <span>JSON İçe Aktar</span>
                   <input
                     id="import-manifest-input"
                     type="file"
@@ -466,14 +467,16 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                   />
                 </label>
 
-                <button
-                  id="reset-default-exhibits-btn"
-                  onClick={handleResetDefaults}
-                  className="p-1.5 rounded-lg bg-stone-900 hover:bg-stone-800 text-stone-400 hover:text-amber-300 border border-stone-800"
-                  title="Reset to default collection"
-                >
-                  <RotateCcw className="w-3.5 h-3.5" />
-                </button>
+                {exhibits.length > 0 && (
+                  <button
+                    id="clear-all-exhibits-btn"
+                    onClick={handleClearAll}
+                    className="p-1.5 rounded-lg bg-stone-900 hover:bg-rose-950/40 text-stone-400 hover:text-rose-400 border border-stone-800 transition-colors"
+                    title="Tüm eserleri temizle"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                )}
               </div>
             </div>
 
@@ -481,78 +484,100 @@ export const AdminModal: React.FC<AdminModalProps> = ({
             <div className="flex-1 overflow-y-auto p-5">
               {activeTab === 'list' ? (
                 /* Exhibits Inventory Table */
-                <div className="space-y-3">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    {exhibits.map((ex) => (
-                      <div
-                        key={ex.id}
-                        className="p-3.5 rounded-xl bg-stone-900/60 border border-stone-800 hover:border-amber-500/40 transition-colors flex gap-3.5 items-start group"
-                      >
-                        {/* Thumbnail */}
-                        <div className="w-20 h-20 rounded-lg overflow-hidden bg-stone-950 shrink-0 border border-stone-800 relative">
-                          <img
-                            src={ex.imageUrl}
-                            alt={ex.title}
-                            className="w-full h-full object-cover"
-                          />
-                        </div>
-
-                        {/* Info */}
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center justify-between">
-                            <h5 className="font-serif font-bold text-sm text-amber-100 truncate">
-                              {ex.title}
-                            </h5>
-                          </div>
-                          <p className="text-xs text-amber-400/80 font-sans mt-0.5">{ex.era}</p>
-                          <p className="text-[11px] text-stone-400 truncate mt-0.5 font-sans">
-                            {ex.provenance}
-                          </p>
-
-                          <div className="flex items-center gap-2 mt-2">
-                            <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-stone-800 text-stone-300 capitalize">
-                              {ex.frameStyle.replace('_', ' ')}
-                            </span>
-                            <span className="text-[10px] font-mono text-stone-400">
-                              X:{ex.position[0]} Z:{ex.position[2]}
-                            </span>
-                          </div>
-                        </div>
-
-                        {/* Actions */}
-                        <div className="flex flex-col gap-1.5 shrink-0 opacity-80 group-hover:opacity-100">
-                          <button
-                            id={`edit-exhibit-${ex.id}-btn`}
-                            onClick={() => startEdit(ex)}
-                            className="p-1.5 rounded-lg bg-stone-800 hover:bg-amber-500 hover:text-stone-950 text-stone-300 transition-colors"
-                            title="Edit exhibit metadata and position"
-                          >
-                            <Edit2 className="w-3.5 h-3.5" />
-                          </button>
-                          <button
-                            id={`focus-exhibit-${ex.id}-btn`}
-                            onClick={() => {
-                              onFocusExhibit(ex);
-                              onClose();
-                            }}
-                            className="p-1.5 rounded-lg bg-stone-800 hover:bg-stone-700 text-amber-300 transition-colors"
-                            title="Fly camera to exhibit"
-                          >
-                            <MapPin className="w-3.5 h-3.5" />
-                          </button>
-                          <button
-                            id={`delete-exhibit-${ex.id}-btn`}
-                            onClick={() => handleDelete(ex.id, ex.title)}
-                            className="p-1.5 rounded-lg bg-stone-800 hover:bg-rose-600 hover:text-white text-stone-400 transition-colors"
-                            title="Remove exhibit"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
-                        </div>
-                      </div>
-                    ))}
+                exhibits.length === 0 ? (
+                  <div className="py-14 px-4 text-center flex flex-col items-center justify-center border border-dashed border-stone-800 rounded-2xl bg-stone-900/30">
+                    <div className="w-12 h-12 rounded-xl bg-stone-800/90 text-amber-400 flex items-center justify-center mb-3">
+                      <Sparkles className="w-6 h-6" />
+                    </div>
+                    <h4 className="font-serif text-base text-stone-200 font-semibold mb-1">
+                      Henüz Eser Eklenmedi
+                    </h4>
+                    <p className="text-xs text-stone-400 max-w-sm mb-5 leading-relaxed">
+                      Açık hava sergi alanı hazır. Eser eklemek ve 3D kaidesini sergiye yerleştirmek için aşağıdaki butona tıklayın.
+                    </p>
+                    <button
+                      id="empty-state-add-artifact-btn"
+                      onClick={startCreateNew}
+                      className="px-5 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-stone-950 font-serif font-bold text-xs flex items-center gap-2 shadow-lg transition-all active:scale-95"
+                    >
+                      <Plus className="w-4 h-4" />
+                      <span>İlk Eseri Ekle</span>
+                    </button>
                   </div>
-                </div>
+                ) : (
+                  <div className="space-y-3">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      {exhibits.map((ex) => (
+                        <div
+                          key={ex.id}
+                          className="p-3.5 rounded-xl bg-stone-900/60 border border-stone-800 hover:border-amber-500/40 transition-colors flex gap-3.5 items-start group"
+                        >
+                          {/* Thumbnail */}
+                          <div className="w-20 h-20 rounded-lg overflow-hidden bg-stone-950 shrink-0 border border-stone-800 relative">
+                            <img
+                              src={ex.imageUrl}
+                              alt={ex.title}
+                              className="w-full h-full object-cover"
+                            />
+                          </div>
+
+                          {/* Info */}
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center justify-between">
+                              <h5 className="font-serif font-bold text-sm text-amber-100 truncate">
+                                {ex.title}
+                              </h5>
+                            </div>
+                            <p className="text-xs text-amber-400/80 font-sans mt-0.5">{ex.era}</p>
+                            <p className="text-[11px] text-stone-400 truncate mt-0.5 font-sans">
+                              {ex.provenance}
+                            </p>
+
+                            <div className="flex items-center gap-2 mt-2">
+                              <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-stone-800 text-stone-300 capitalize">
+                                {ex.frameStyle.replace('_', ' ')}
+                              </span>
+                              <span className="text-[10px] font-mono text-stone-400">
+                                X:{ex.position[0]} Z:{ex.position[2]}
+                              </span>
+                            </div>
+                          </div>
+
+                          {/* Actions */}
+                          <div className="flex flex-col gap-1.5 shrink-0 opacity-80 group-hover:opacity-100">
+                            <button
+                              id={`edit-exhibit-${ex.id}-btn`}
+                              onClick={() => startEdit(ex)}
+                              className="p-1.5 rounded-lg bg-stone-800 hover:bg-amber-500 hover:text-stone-950 text-stone-300 transition-colors"
+                              title="Eser bilgilerini ve konumunu düzenle"
+                            >
+                              <Edit2 className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                              id={`focus-exhibit-${ex.id}-btn`}
+                              onClick={() => {
+                                onFocusExhibit(ex);
+                                onClose();
+                              }}
+                              className="p-1.5 rounded-lg bg-stone-800 hover:bg-stone-700 text-amber-300 transition-colors"
+                              title="Kamerayı esere yönlendir"
+                            >
+                              <MapPin className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                              id={`delete-exhibit-${ex.id}-btn`}
+                              onClick={() => handleDelete(ex.id, ex.title)}
+                              className="p-1.5 rounded-lg bg-stone-800 hover:bg-rose-600 hover:text-white text-stone-400 transition-colors"
+                              title="Eseri kaldır"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )
               ) : (
                 /* Artifact Form Editor */
                 <form onSubmit={handleSaveForm} className="space-y-5">
@@ -562,14 +587,14 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                       {/* Image Preview & Upload Box */}
                       <div>
                         <label className="block text-xs font-serif text-amber-200 mb-1.5">
-                          Artifact Photo / 3D Canvas Image *
+                          Eser Fotoğrafı / Görsel *
                         </label>
                         <div className="border-2 border-dashed border-stone-700 rounded-xl p-4 bg-stone-900/50 flex flex-col items-center justify-center text-center relative overflow-hidden group">
                           {formImageUrl ? (
                             <div className="relative w-full h-48 rounded-lg overflow-hidden bg-stone-950">
                               <img
                                 src={formImageUrl}
-                                alt="Preview"
+                                alt="Önizleme"
                                 className="w-full h-full object-contain"
                               />
                               <div className="absolute inset-0 bg-stone-950/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
@@ -578,7 +603,7 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                                   onClick={() => fileInputRef.current?.click()}
                                   className="px-3 py-1.5 rounded-lg bg-amber-500 text-stone-950 text-xs font-bold font-serif"
                                 >
-                                  Replace File
+                                  Fotoğrafı Değiştir
                                 </button>
                               </div>
                             </div>
@@ -591,10 +616,10 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                                 <ImageIcon className="w-6 h-6" />
                               </div>
                               <p className="text-xs text-stone-300 font-medium">
-                                Drag & drop or click to upload photo
+                                Fotoğraf yüklemek için tıklayın veya sürükleyin
                               </p>
                               <p className="text-[11px] text-stone-400">
-                                PNG, JPG, WebP supported
+                                PNG, JPG, WebP formatları desteklenir
                               </p>
                             </div>
                           )}
@@ -613,7 +638,7 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                       {/* Or direct URL input */}
                       <div>
                         <label className="block text-xs font-sans text-stone-400 mb-1">
-                          Or Direct Image URL
+                          Veya Doğrudan Görsel URLsi
                         </label>
                         <input
                           id="form-image-url-input"
@@ -628,14 +653,14 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                       {/* Display Stand Frame Style */}
                       <div>
                         <label className="block text-xs font-serif text-amber-200 mb-1.5">
-                          3D Display Stand & Vitrine Style
+                          3D Kaide & Vitrin Stili
                         </label>
                         <div className="grid grid-cols-2 gap-2">
                           {[
-                            { id: 'stone_pedestal', label: 'Classical Marble Pedestal', desc: 'Carved stone with brass plaque' },
-                            { id: 'glass_vitrine', label: 'Museum Glass Vitrine', desc: 'Tempered glass with brass frame' },
-                            { id: 'bronze_stela', label: 'Ancient Bronze Stela', desc: 'Weathered patina stela' },
-                            { id: 'obsidian_monolith', label: 'Obsidian Monolith', desc: 'Dark basalt with gold edging' },
+                            { id: 'stone_pedestal', label: 'Klasik Mermer Kaide', desc: 'Pirinç plakalı yontma taş' },
+                            { id: 'glass_vitrine', label: 'Müze Cam Vitrini', desc: 'Pirinç çerçeveli temperli cam' },
+                            { id: 'bronze_stela', label: 'Antik Bronz Stel', desc: 'Eskitilmiş patinalı stel' },
+                            { id: 'obsidian_monolith', label: 'Obsidyen Monolit', desc: 'Altın kenarlı koyu bazalt' },
                           ].map((style) => (
                             <button
                               key={style.id}
@@ -660,36 +685,64 @@ export const AdminModal: React.FC<AdminModalProps> = ({
 
                       {/* 3D World Positioning Coordinates */}
                       <div className="p-3.5 rounded-xl bg-stone-900/60 border border-stone-800 space-y-3">
-                        <label className="block text-xs font-serif text-amber-200">
-                          3D Coordinates in Archaeological Site (X, Z)
-                        </label>
+                        <div className="flex items-center justify-between">
+                          <label className="block text-xs font-serif text-amber-200">
+                            Sergi Alanı 3D Konumu (Genişletilebilir Saha)
+                          </label>
+                          <span className="text-[10px] text-stone-500 font-mono">X / Z / Açı</span>
+                        </div>
                         <div className="grid grid-cols-3 gap-2">
-                          <div>
-                            <span className="text-[10px] text-stone-400 block font-mono">X Axis: {formPosX}</span>
+                          <div className="space-y-1">
+                            <div className="flex items-center justify-between text-[10px] text-stone-400 font-mono">
+                              <span>X:</span>
+                              <input
+                                type="number"
+                                min="-80"
+                                max="80"
+                                step="0.5"
+                                value={formPosX}
+                                onChange={(e) => setFormPosX(Number(e.target.value))}
+                                className="w-14 px-1.5 py-0.5 rounded bg-stone-950 border border-stone-800 text-amber-200 text-right font-mono text-[10px]"
+                              />
+                            </div>
                             <input
                               type="range"
-                              min="-24"
-                              max="24"
+                              min="-80"
+                              max="80"
+                              step="0.5"
                               value={formPosX}
                               onChange={(e) => setFormPosX(Number(e.target.value))}
                               className="w-full accent-amber-500"
                             />
                           </div>
-                          <div>
-                            <span className="text-[10px] text-stone-400 block font-mono">Z Axis: {formPosZ}</span>
+                          <div className="space-y-1">
+                            <div className="flex items-center justify-between text-[10px] text-stone-400 font-mono">
+                              <span>Z:</span>
+                              <input
+                                type="number"
+                                min="-80"
+                                max="80"
+                                step="0.5"
+                                value={formPosZ}
+                                onChange={(e) => setFormPosZ(Number(e.target.value))}
+                                className="w-14 px-1.5 py-0.5 rounded bg-stone-950 border border-stone-800 text-amber-200 text-right font-mono text-[10px]"
+                              />
+                            </div>
                             <input
                               type="range"
-                              min="-24"
-                              max="24"
+                              min="-80"
+                              max="80"
+                              step="0.5"
                               value={formPosZ}
                               onChange={(e) => setFormPosZ(Number(e.target.value))}
                               className="w-full accent-amber-500"
                             />
                           </div>
-                          <div>
-                            <span className="text-[10px] text-stone-400 block font-mono">
-                              Angle: {Math.round((formRotationY * 180) / Math.PI)}°
-                            </span>
+                          <div className="space-y-1">
+                            <div className="flex items-center justify-between text-[10px] text-stone-400 font-mono">
+                              <span>Açı:</span>
+                              <span className="text-amber-200 font-mono text-[10px]">{Math.round((formRotationY * 180) / Math.PI)}°</span>
+                            </div>
                             <input
                               type="range"
                               min="-3.14"
@@ -708,7 +761,7 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                     <div className="space-y-3">
                       <div>
                         <label className="block text-xs font-serif text-amber-200 mb-1">
-                          Artifact Title *
+                          Eser Başlığı *
                         </label>
                         <input
                           id="form-title-input"
@@ -716,7 +769,7 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                           required
                           value={formTitle}
                           onChange={(e) => setFormTitle(e.target.value)}
-                          placeholder="e.g. Bronze Charioteer of Delphi"
+                          placeholder="Örn. Truva Altın Takıları"
                           className="w-full px-3 py-2 rounded-lg bg-stone-900 border border-stone-700 text-stone-100 text-xs focus:outline-none focus:border-amber-500 font-serif"
                         />
                       </div>
@@ -724,26 +777,26 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                       <div className="grid grid-cols-2 gap-2">
                         <div>
                           <label className="block text-xs font-serif text-amber-200 mb-1">
-                            Historical Era / Date
+                            Tarihsel Dönem / Çağ
                           </label>
                           <input
                             type="text"
                             value={formEra}
                             onChange={(e) => setFormEra(e.target.value)}
-                            placeholder="e.g. c. 470 BCE (Classical)"
+                            placeholder="Örn. M.Ö. 1200 (Geç Tunç Çağı)"
                             className="w-full px-3 py-2 rounded-lg bg-stone-900 border border-stone-700 text-stone-100 text-xs focus:outline-none focus:border-amber-500"
                           />
                         </div>
 
                         <div>
                           <label className="block text-xs font-serif text-amber-200 mb-1">
-                            Excavation Provenance
+                            Kazı / Buluntu Yeri (Menşei)
                           </label>
                           <input
                             type="text"
                             value={formProvenance}
                             onChange={(e) => setFormProvenance(e.target.value)}
-                            placeholder="e.g. Sanctuary of Apollo, Delphi"
+                            placeholder="Örn. Truva Antik Kenti, Çanakkale"
                             className="w-full px-3 py-2 rounded-lg bg-stone-900 border border-stone-700 text-stone-100 text-xs focus:outline-none focus:border-amber-500"
                           />
                         </div>
@@ -752,26 +805,26 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                       <div className="grid grid-cols-2 gap-2">
                         <div>
                           <label className="block text-xs font-serif text-amber-200 mb-1">
-                            Material / Medium
+                            Malzeme / Materyal
                           </label>
                           <input
                             type="text"
                             value={formMaterial}
                             onChange={(e) => setFormMaterial(e.target.value)}
-                            placeholder="e.g. Cast Bronze, Glass Inlay"
+                            placeholder="Örn. Dövme Altın, Değerli Taş"
                             className="w-full px-3 py-2 rounded-lg bg-stone-900 border border-stone-700 text-stone-100 text-xs focus:outline-none focus:border-amber-500"
                           />
                         </div>
 
                         <div>
                           <label className="block text-xs font-serif text-amber-200 mb-1">
-                            Dimensions
+                            Boyutlar
                           </label>
                           <input
                             type="text"
                             value={formDimensions}
                             onChange={(e) => setFormDimensions(e.target.value)}
-                            placeholder="e.g. 1.80 m height"
+                            placeholder="Örn. 24 x 18 cm"
                             className="w-full px-3 py-2 rounded-lg bg-stone-900 border border-stone-700 text-stone-100 text-xs focus:outline-none focus:border-amber-500"
                           />
                         </div>
@@ -779,52 +832,52 @@ export const AdminModal: React.FC<AdminModalProps> = ({
 
                       <div>
                         <label className="block text-xs font-serif text-amber-200 mb-1">
-                          Archaeological Description & History
+                          Arkeolojik Açıklama & Tarihçe
                         </label>
                         <textarea
                           rows={3}
                           value={formDescription}
                           onChange={(e) => setFormDescription(e.target.value)}
-                          placeholder="Comprehensive archaeological history and artistic context..."
+                          placeholder="Eserin arkeolojik tarihçesi, sanatsal bağlamı ve detaylı anlatımı..."
                           className="w-full px-3 py-2 rounded-lg bg-stone-900 border border-stone-700 text-stone-100 text-xs focus:outline-none focus:border-amber-500 font-sans"
                         />
                       </div>
 
                       <div>
                         <label className="block text-xs font-serif text-amber-200 mb-1">
-                          Curator Excavation Notes
+                          Küratör Kazı Notları
                         </label>
                         <textarea
                           rows={2}
                           value={formCuratorNotes}
                           onChange={(e) => setFormCuratorNotes(e.target.value)}
-                          placeholder="Field notes on excavation stratigraphy, restoration, or discovery..."
+                          placeholder="Kazı stratigrafisi, restorasyon veya keşif saha notları..."
                           className="w-full px-3 py-2 rounded-lg bg-stone-900 border border-stone-700 text-stone-100 text-xs focus:outline-none focus:border-amber-500 font-sans"
                         />
                       </div>
 
                       <div>
                         <label className="block text-xs font-serif text-amber-200 mb-1">
-                          Audio Guide Narration Script
+                          Sesli Rehber Anlatım Metni
                         </label>
                         <input
                           type="text"
                           value={formAudioText}
                           onChange={(e) => setFormAudioText(e.target.value)}
-                          placeholder="Text spoken by the audio guide narrator..."
+                          placeholder="Sesli rehber tarafından seslendirilecek metin..."
                           className="w-full px-3 py-2 rounded-lg bg-stone-900 border border-stone-700 text-stone-100 text-xs focus:outline-none focus:border-amber-500"
                         />
                       </div>
 
                       <div>
                         <label className="block text-xs font-serif text-amber-200 mb-1">
-                          Tags (comma separated)
+                          Etiketler (virgülle ayırın)
                         </label>
                         <input
                           type="text"
                           value={formTags}
                           onChange={(e) => setFormTags(e.target.value)}
-                          placeholder="Bronze, Classical, Delphi, Sculpture"
+                          placeholder="Altın, Tunç Çağı, Truva, Takı"
                           className="w-full px-3 py-2 rounded-lg bg-stone-900 border border-stone-700 text-stone-100 text-xs focus:outline-none focus:border-amber-500"
                         />
                       </div>
@@ -839,7 +892,7 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                       onClick={() => setActiveTab('list')}
                       className="px-4 py-2 rounded-xl bg-stone-900 hover:bg-stone-800 text-stone-300 text-xs font-sans border border-stone-800"
                     >
-                      Back to Inventory
+                      Envantere Dön
                     </button>
 
                     <button
@@ -848,7 +901,7 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                       className="px-6 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-stone-950 font-serif font-bold text-xs flex items-center gap-1.5 shadow-lg transition-colors"
                     >
                       <Save className="w-4 h-4" />
-                      <span>{editingExhibitId ? 'Save Exhibit Changes' : 'Spawn 3D Exhibit Stand'}</span>
+                      <span>{editingExhibitId ? 'Değişiklikleri Kaydet' : '3D Sergi Kaidesi Oluştur'}</span>
                     </button>
                   </div>
                 </form>

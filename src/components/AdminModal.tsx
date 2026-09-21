@@ -62,6 +62,7 @@ export const AdminModal: React.FC<AdminModalProps> = ({
   const [formRotationY, setFormRotationY] = useState<number>(0);
   const [formTags, setFormTags] = useState('');
   const [formAudioText, setFormAudioText] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
 
   const [notification, setNotification] = useState<{ msg: string; type: 'success' | 'error' } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -119,18 +120,18 @@ export const AdminModal: React.FC<AdminModalProps> = ({
 
   const startEdit = (exhibit: Exhibit) => {
     setEditingExhibitId(exhibit.id);
-    setFormTitle(exhibit.title);
+    setFormTitle(exhibit.title || '');
     setFormSubtitle(exhibit.subtitle || '');
-    setFormEra(exhibit.era);
-    setFormProvenance(exhibit.provenance);
-    setFormMaterial(exhibit.material);
+    setFormEra(exhibit.era || '');
+    setFormProvenance(exhibit.provenance || '');
+    setFormMaterial(exhibit.material || '');
     setFormDimensions(exhibit.dimensions || '');
-    setFormDescription(exhibit.description);
+    setFormDescription(exhibit.description || '');
     setFormCuratorNotes(exhibit.curatorNotes || '');
-    setFormImageUrl(exhibit.imageUrl);
-    setFormFrameStyle(exhibit.frameStyle);
-    setFormPosX(exhibit.position[0]);
-    setFormPosZ(exhibit.position[2]);
+    setFormImageUrl(exhibit.imageUrl || '');
+    setFormFrameStyle(exhibit.frameStyle || 'stone_pedestal');
+    setFormPosX(exhibit.position ? exhibit.position[0] : 0);
+    setFormPosZ(exhibit.position ? exhibit.position[2] : 0);
     setFormRotationY(exhibit.rotationY || 0);
     setFormTags(exhibit.tags ? exhibit.tags.join(', ') : '');
     setFormAudioText(exhibit.audioGuideText || '');
@@ -150,10 +151,10 @@ export const AdminModal: React.FC<AdminModalProps> = ({
     reader.onload = (loadEvt) => {
       const dataUrl = loadEvt.target?.result as string;
       
-      // Optimize image via Canvas to avoid large base64 strings
+      // Optimize image via Canvas to avoid large base64 strings and ensure fast sync
       const img = new Image();
       img.onload = () => {
-        const maxDim = 1200;
+        const maxDim = 800;
         let w = img.width;
         let h = img.height;
         if (w > maxDim || h > maxDim) {
@@ -171,24 +172,28 @@ export const AdminModal: React.FC<AdminModalProps> = ({
         const ctx = canvas.getContext('2d');
         if (ctx) {
           ctx.drawImage(img, 0, 0, w, h);
-          const optimizedDataUrl = canvas.toDataURL('image/jpeg', 0.85);
+          let optimizedDataUrl = canvas.toDataURL('image/jpeg', 0.78);
+          // If still large, compress to 0.6
+          if (optimizedDataUrl.length > 500000) {
+            optimizedDataUrl = canvas.toDataURL('image/jpeg', 0.6);
+          }
           setFormImageUrl(optimizedDataUrl);
-          showNotification('Fotoğraf yüklendi ve 3D sergi için optimize edildi');
+          showNotification('Fotoğraf yüklendi ve bulut senkronizasyonu için optimize edildi');
         } else {
           setFormImageUrl(dataUrl);
-          showNotification('Fotoğraf başarıyla yüklendi');
+          showNotification('Fotoğraf yüklendi');
         }
       };
       img.onerror = () => {
         setFormImageUrl(dataUrl);
-        showNotification('Fotoğraf başarıyla yüklendi');
+        showNotification('Fotoğraf yüklendi');
       };
       img.src = dataUrl;
     };
     reader.readAsDataURL(file);
   };
 
-  const handleSaveForm = (e: React.FormEvent) => {
+  const handleSaveForm = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formTitle.trim()) {
       showNotification('Lütfen eser başlığı girin', 'error');
@@ -199,6 +204,7 @@ export const AdminModal: React.FC<AdminModalProps> = ({
       return;
     }
 
+    setIsSaving(true);
     const tagsArray = formTags
       .split(',')
       .map((t) => t.trim())
@@ -212,65 +218,83 @@ export const AdminModal: React.FC<AdminModalProps> = ({
         if (ex.id === editingExhibitId) {
           return {
             ...ex,
-            title: formTitle,
-            subtitle: formSubtitle,
-            era: formEra,
-            provenance: formProvenance,
-            material: formMaterial,
-            dimensions: formDimensions,
-            description: formDescription,
-            curatorNotes: formCuratorNotes,
-            imageUrl: formImageUrl,
+            title: formTitle.trim(),
+            subtitle: formSubtitle.trim(),
+            era: formEra.trim(),
+            provenance: formProvenance.trim(),
+            material: formMaterial.trim(),
+            dimensions: formDimensions.trim(),
+            description: formDescription.trim(),
+            curatorNotes: formCuratorNotes.trim(),
+            imageUrl: formImageUrl.trim(),
             frameStyle: formFrameStyle,
             position: [formPosX, 0, formPosZ],
             rotationY: formRotationY,
             tags: tagsArray,
-            audioGuideText: formAudioText || undefined,
+            audioGuideText: formAudioText.trim() || undefined,
           };
         }
         return ex;
       });
-      showNotification(`"${formTitle}" eseri güncellendi!`);
     } else {
-      // Create new
+      // Create new with robust unique ID
+      const randomSuffix = Math.random().toString(36).substring(2, 7);
       const newExhibit: Exhibit = {
-        id: `exhibit-user-${Date.now()}`,
-        title: formTitle,
-        subtitle: formSubtitle || '',
-        era: formEra || '',
-        provenance: formProvenance || '',
-        material: formMaterial || '',
-        dimensions: formDimensions || '',
-        description: formDescription || '',
-        curatorNotes: formCuratorNotes || '',
-        imageUrl: formImageUrl,
+        id: `art_${Date.now()}_${randomSuffix}`,
+        title: formTitle.trim(),
+        subtitle: formSubtitle.trim(),
+        era: formEra.trim(),
+        provenance: formProvenance.trim(),
+        material: formMaterial.trim(),
+        dimensions: formDimensions.trim(),
+        description: formDescription.trim(),
+        curatorNotes: formCuratorNotes.trim(),
+        imageUrl: formImageUrl.trim(),
         frameStyle: formFrameStyle,
         position: [formPosX, 0, formPosZ],
         rotationY: formRotationY,
         tags: tagsArray,
         createdAt: Date.now(),
-        audioGuideText: formAudioText || undefined,
+        audioGuideText: formAudioText.trim() || undefined,
       };
       updatedList = [newExhibit, ...exhibits];
-      showNotification(`"${formTitle}" eseri 3D sergide oluşturuldu!`);
     }
 
-    onSaveExhibits(updatedList);
-    setActiveTab('list');
+    try {
+      await onSaveExhibits(updatedList);
+      showNotification(
+        editingExhibitId
+          ? `"${formTitle}" eseri güncellendi ve tüm ziyaretçilere yayınlandı!`
+          : `"${formTitle}" eseri 3D sergide oluşturuldu ve herkese yayınlandı!`
+      );
+      setActiveTab('list');
+    } catch (err) {
+      showNotification('Bulut veritabanına kaydederken hata oluştu: ' + (err instanceof Error ? err.message : String(err)), 'error');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
-  const handleDelete = (id: string, title: string) => {
+  const handleDelete = async (id: string, title: string) => {
     if (window.confirm(`"${title}" eserini sergiden kaldırmak istediğinize emin misiniz?`)) {
       const filtered = exhibits.filter((ex) => ex.id !== id);
-      onSaveExhibits(filtered);
-      showNotification(`Eser kaldırıldı.`);
+      try {
+        await onSaveExhibits(filtered);
+        showNotification(`Eser kaldırıldı ve buluttan silindi.`);
+      } catch (err) {
+        showNotification('Silme işlemi sırasında hata oluştu', 'error');
+      }
     }
   };
 
-  const handleClearAll = () => {
+  const handleClearAll = async () => {
     if (window.confirm('Tüm eserleri sergiden temizlemek istediğinize emin misiniz?')) {
-      onSaveExhibits([]);
-      showNotification('Tüm eserler temizlendi.');
+      try {
+        await onSaveExhibits([]);
+        showNotification('Tüm eserler temizlendi.');
+      } catch (err) {
+        showNotification('Temizleme işlemi sırasında hata oluştu', 'error');
+      }
     }
   };
 
@@ -898,10 +922,21 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                     <button
                       id="save-exhibit-form-btn"
                       type="submit"
-                      className="px-6 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-stone-950 font-serif font-bold text-xs flex items-center gap-1.5 shadow-lg transition-colors"
+                      disabled={isSaving}
+                      className={`px-6 py-2 rounded-xl font-serif font-bold text-xs flex items-center gap-1.5 shadow-lg transition-colors ${
+                        isSaving
+                          ? 'bg-amber-600/60 text-stone-900 cursor-wait opacity-75'
+                          : 'bg-amber-500 hover:bg-amber-400 text-stone-950'
+                      }`}
                     >
-                      <Save className="w-4 h-4" />
-                      <span>{editingExhibitId ? 'Değişiklikleri Kaydet' : '3D Sergi Kaidesi Oluştur'}</span>
+                      <Save className={`w-4 h-4 ${isSaving ? 'animate-spin' : ''}`} />
+                      <span>
+                        {isSaving
+                          ? 'Buluta Kaydediliyor...'
+                          : editingExhibitId
+                          ? 'Değişiklikleri Kaydet & Yayınla'
+                          : '3D Sergi Kaidesi Oluştur & Yayınla'}
+                      </span>
                     </button>
                   </div>
                 </form>

@@ -9,7 +9,7 @@ import { ExhibitionScene } from './scene/ExhibitionScene';
 import { DEFAULT_EXHIBITS } from './data/defaultExhibits';
 import { Exhibit, TimeOfDay, CameraMode, PlayerState } from './types';
 import { soundManager } from './audio/soundManager';
-import { subscribeToExhibits, syncAllExhibitsToCloud } from './firebase';
+import { subscribeToExhibits, syncAllExhibitsToCloud, testConnection } from './firebase';
 
 export default function App() {
   // Exhibits State with persistent localStorage + Firestore real-time sync
@@ -19,13 +19,8 @@ export default function App() {
       if (saved) {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed)) {
-          // Filter out default mock artifacts if any existed from earlier sessions
-          const userOnly = parsed.filter(
-            (e) => e && e.id && !e.id.startsWith('exhibit-1') && !e.id.startsWith('exhibit-2') &&
-                   !e.id.startsWith('exhibit-3') && !e.id.startsWith('exhibit-4') &&
-                   !e.id.startsWith('exhibit-5') && !e.id.startsWith('exhibit-6') &&
-                   !e.id.startsWith('exhibit-7') && !e.id.startsWith('exhibit-8')
-          );
+          const MOCK_IDS = new Set(['exhibit-1','exhibit-2','exhibit-3','exhibit-4','exhibit-5','exhibit-6','exhibit-7','exhibit-8']);
+          const userOnly = parsed.filter((e) => e && e.id && !MOCK_IDS.has(e.id));
           return userOnly;
         }
       }
@@ -50,13 +45,13 @@ export default function App() {
 
   // Subscribe to real-time Cloud Firestore updates for all visitors
   useEffect(() => {
+    testConnection().catch(console.warn);
+
+    const MOCK_IDS = new Set(['exhibit-1','exhibit-2','exhibit-3','exhibit-4','exhibit-5','exhibit-6','exhibit-7','exhibit-8']);
     const unsubscribe = subscribeToExhibits(
       (cloudExhibits) => {
         const list = Array.isArray(cloudExhibits) ? cloudExhibits : [];
-        // Filter out legacy mock artifacts if any are present
-        const filtered = list.filter(
-          (e) => e && e.id && !['exhibit-1','exhibit-2','exhibit-3','exhibit-4','exhibit-5','exhibit-6','exhibit-7','exhibit-8'].includes(e.id)
-        );
+        const filtered = list.filter((e) => e && e.id && !MOCK_IDS.has(e.id));
         setExhibits(filtered);
         setIsCloudSynced(true);
         try {
@@ -89,6 +84,7 @@ export default function App() {
       setIsCloudSynced(true);
     } catch (err) {
       console.error('Failed to sync exhibits to Firestore cloud database:', err);
+      throw err;
     }
   };
 

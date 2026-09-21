@@ -7,11 +7,36 @@ import {
   deleteDoc,
   onSnapshot,
   getDocs,
+  getDocFromServer,
   writeBatch,
 } from 'firebase/firestore';
 import firebaseConfig from '../firebase-applet-config.json';
 import { Exhibit } from './types';
-import { DEFAULT_EXHIBITS } from './data/defaultExhibits';
+
+export enum OperationType {
+  CREATE = 'create',
+  UPDATE = 'update',
+  DELETE = 'delete',
+  LIST = 'list',
+  GET = 'get',
+  WRITE = 'write',
+}
+
+export interface FirestoreErrorInfo {
+  error: string;
+  operationType: OperationType;
+  path: string | null;
+}
+
+export function handleFirestoreError(error: unknown, operationType: OperationType, path: string | null) {
+  const errInfo: FirestoreErrorInfo = {
+    error: error instanceof Error ? error.message : String(error),
+    operationType,
+    path,
+  };
+  console.error('Firestore Error: ', JSON.stringify(errInfo));
+  return errInfo;
+}
 
 // Initialize Firebase App singleton
 export const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
@@ -22,6 +47,51 @@ export const db = firebaseConfig.firestoreDatabaseId
   : getFirestore(app);
 
 const EXHIBITS_COLLECTION = 'exhibits';
+
+/**
+ * Strips undefined values and ensures proper types so Firestore never throws unsupported value errors
+ */
+export function sanitizeExhibitForFirestore(exhibit: Exhibit): Record<string, any> {
+  const clean: Record<string, any> = {
+    id: exhibit.id || `exhibit-${Date.now()}`,
+    title: exhibit.title || '',
+    subtitle: exhibit.subtitle || '',
+    era: exhibit.era || '',
+    provenance: exhibit.provenance || '',
+    material: exhibit.material || '',
+    dimensions: exhibit.dimensions || '',
+    description: exhibit.description || '',
+    curatorNotes: exhibit.curatorNotes || '',
+    imageUrl: exhibit.imageUrl || '',
+    frameStyle: exhibit.frameStyle || 'stone_pedestal',
+    position: Array.isArray(exhibit.position) ? exhibit.position : [0, 0, 0],
+    rotationY: typeof exhibit.rotationY === 'number' ? exhibit.rotationY : 0,
+    tags: Array.isArray(exhibit.tags) ? exhibit.tags : [],
+    createdAt: typeof exhibit.createdAt === 'number' ? exhibit.createdAt : Date.now(),
+  };
+
+  if (exhibit.thumbnailUrl) clean.thumbnailUrl = exhibit.thumbnailUrl;
+  if (exhibit.highlightColor) clean.highlightColor = exhibit.highlightColor;
+  if (exhibit.audioGuideText) clean.audioGuideText = exhibit.audioGuideText;
+  if (typeof exhibit.scale === 'number') clean.scale = exhibit.scale;
+
+  return clean;
+}
+
+/**
+ * Test initial Firestore cloud connection
+ */
+export async function testConnection(): Promise<boolean> {
+  try {
+    await getDocFromServer(doc(db, EXHIBITS_COLLECTION, 'health_check'));
+    return true;
+  } catch (error) {
+    if (error instanceof Error && error.message.includes('the client is offline')) {
+      console.warn('Firestore client is offline, check connection.');
+    }
+    return false;
+  }
+}
 
 /**
  * Subscribe to real-time updates of all exhibition artifacts in Firestore.
@@ -50,12 +120,12 @@ export function subscribeToExhibits(
         });
       });
 
-      // Sort by createdAt ascending (or default order)
+      // Sort by createdAt ascending
       items.sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
       onExhibitsUpdated(items);
     },
     (error) => {
-      console.error('Firestore real-time subscription error:', error);
+      handleFirestoreError(error, OperationType.GET, EXHIBITS_COLLECTION);
       if (onError) onError(error);
     }
   );
@@ -64,18 +134,17 @@ export function subscribeToExhibits(
 }
 
 /**
- * Seed the initial exhibition data if the cloud collection is empty (no-op when empty)
- */
-export async function seedDefaultExhibits() {
-  // No mock artifacts by default
-}
-
-/**
- * Save or update an exhibit in Firestore
+ * Save or update a single exhibit in Firestore
  */
 export async function saveExhibitToCloud(exhibit: Exhibit): Promise<void> {
-  const docRef = doc(db, EXHIBITS_COLLECTION, exhibit.id);
-  await setDoc(docRef, exhibit, { merge: true });
+  const sanitized = sanitizeExhibitForFirestore(exhibit);
+  const docRef = doc(db, EXHIBITS_COLLECTION, sanitized.id);
+  try {
+    await setDoc(docRef, sanitized, { merge: true });
+  } catch (error) {
+    handleFirestoreError(error, OperationType.WRITE, `${EXHIBITS_COLLECTION}/${sanitized.id}`);
+    throw error;
+  }
 }
 
 /**
@@ -83,32 +152,40 @@ export async function saveExhibitToCloud(exhibit: Exhibit): Promise<void> {
  */
 export async function deleteExhibitFromCloud(exhibitId: string): Promise<void> {
   const docRef = doc(db, EXHIBITS_COLLECTION, exhibitId);
-  await deleteDoc(docRef);
+  try {
+    await deleteDoc(docRef);
+  } catch (error) {
+    handleFirestoreError(error, OperationType.DELETE, `${EXHIBITS_COLLECTION}/${exhibitId}`);
+    throw error;
+  }
 }
 
 /**
  * Sync all exhibits (batch update / replace)
  */
 export async function syncAllExhibitsToCloud(exhibits: Exhibit[]): Promise<void> {
-  const exhibitsRef = collection(db, EXHIBITS_COLLECTION);
-  const existingDocs = await getDocs(exhibitsRef);
-  const existingIds = new Set(existingDocs.docs.map((d) => d.id));
-  const newIds = new Set(exhibits.map((e) => e.id));
+  try {
+    const exhibitsRef = collection(db, EXHIBITS_COLLECTION);
+    const existingDocs = await getDocs(exhibitsRef);
+    const existingIds = new Set(existingDocs.docs.map((d) => d.id));
+    const newIds = new Set(exhibits.map((e) => e.id));
 
-  const batch = writeBatch(db);
-
-  // 1. Delete removed exhibits
-  existingDocs.docs.forEach((docSnap) => {
-    if (!newIds.has(docSnap.id)) {
-      batch.delete(docSnap.ref);
+    // 1. Delete removed exhibits individually or via batch
+    for (const docSnap of existingDocs.docs) {
+      if (!newIds.has(docSnap.id)) {
+        await deleteDoc(docSnap.ref);
+      }
     }
-  });
 
-  // 2. Set all current exhibits
-  exhibits.forEach((exhibit) => {
-    const docRef = doc(db, EXHIBITS_COLLECTION, exhibit.id);
-    batch.set(docRef, exhibit);
-  });
-
-  await batch.commit();
+    // 2. Set all current exhibits with sanitized data
+    for (const exhibit of exhibits) {
+      const sanitized = sanitizeExhibitForFirestore(exhibit);
+      const docRef = doc(db, EXHIBITS_COLLECTION, sanitized.id);
+      await setDoc(docRef, sanitized, { merge: true });
+    }
+  } catch (error) {
+    handleFirestoreError(error, OperationType.WRITE, EXHIBITS_COLLECTION);
+    throw error;
+  }
 }
+

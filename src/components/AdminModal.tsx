@@ -8,6 +8,10 @@ import {
   Lock,
   Unlock,
   Image as ImageIcon,
+  Images,
+  FolderPlus,
+  Loader2,
+  Check,
   Save,
   Download,
   RotateCcw,
@@ -19,6 +23,14 @@ import {
 } from 'lucide-react';
 import { Exhibit, DisplayFrameStyle } from '../types';
 import { DEFAULT_EXHIBITS } from '../data/defaultExhibits';
+
+export interface BulkItemCandidate {
+  id: string;
+  file: File;
+  title: string;
+  imageUrl: string;
+  aspectRatio: number;
+}
 
 interface AdminModalProps {
   isOpen: boolean;
@@ -42,9 +54,15 @@ export const AdminModal: React.FC<AdminModalProps> = ({
   const [passwordInput, setPasswordInput] = useState('');
   const [authError, setAuthError] = useState('');
 
-  // Active Tab: 'list' | 'editor'
-  const [activeTab, setActiveTab] = useState<'list' | 'editor'>('list');
+  // Active Tab: 'list' | 'editor' | 'bulk'
+  const [activeTab, setActiveTab] = useState<'list' | 'editor' | 'bulk'>('list');
   const [editingExhibitId, setEditingExhibitId] = useState<string | null>(null);
+
+  // Bulk Upload State
+  const [bulkCandidates, setBulkCandidates] = useState<BulkItemCandidate[]>([]);
+  const [bulkFrameStyle, setBulkFrameStyle] = useState<DisplayFrameStyle>('stone_pedestal');
+  const [isProcessingBulk, setIsProcessingBulk] = useState(false);
+  const bulkFileInputRef = useRef<HTMLInputElement>(null);
 
   // Form State
   const [formTitle, setFormTitle] = useState('');
@@ -67,6 +85,156 @@ export const AdminModal: React.FC<AdminModalProps> = ({
 
   const [notification, setNotification] = useState<{ msg: string; type: 'success' | 'error' } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Helper to process a single file for bulk queue
+  const processSingleImageFile = (file: File): Promise<BulkItemCandidate> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onerror = () => reject(new Error('Dosya okunamadı'));
+      reader.onload = (e) => {
+        const dataUrl = e.target?.result as string;
+        const img = new Image();
+        img.onerror = () => reject(new Error('Görsel yüklenemedi'));
+        img.onload = () => {
+          const aspect = Math.round((img.naturalWidth / img.naturalHeight) * 100) / 100;
+          const maxDim = 800;
+          let w = img.width;
+          let h = img.height;
+          if (w > maxDim || h > maxDim) {
+            if (w > h) {
+              h = Math.round((h * maxDim) / w);
+              w = maxDim;
+            } else {
+              w = Math.round((w * maxDim) / h);
+              h = maxDim;
+            }
+          }
+          const canvas = document.createElement('canvas');
+          canvas.width = w;
+          canvas.height = h;
+          const ctx = canvas.getContext('2d');
+          let finalUrl = dataUrl;
+          if (ctx) {
+            ctx.drawImage(img, 0, 0, w, h);
+            let optimized = canvas.toDataURL('image/jpeg', 0.78);
+            if (optimized.length > 500000) {
+              optimized = canvas.toDataURL('image/jpeg', 0.6);
+            }
+            finalUrl = optimized;
+          }
+
+          let cleanTitle = file.name.replace(/\.[^/.]+$/, '');
+          cleanTitle = cleanTitle.replace(/[-_]/g, ' ');
+          cleanTitle = cleanTitle.trim();
+          if (cleanTitle) {
+            cleanTitle = cleanTitle.charAt(0).toUpperCase() + cleanTitle.slice(1);
+          } else {
+            cleanTitle = 'Arkeolojik Eser';
+          }
+
+          resolve({
+            id: `bulk_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+            file,
+            title: cleanTitle,
+            imageUrl: finalUrl,
+            aspectRatio: aspect,
+          });
+        };
+        img.src = dataUrl;
+      };
+      reader.readAsDataURL(file);
+    });
+  };
+
+  const handleBulkFilesSelected = async (filesList: FileList | File[]) => {
+    const files = Array.from(filesList).filter((f) => f.type.startsWith('image/'));
+    if (files.length === 0) {
+      showNotification('Lütfen geçerli görsel dosyaları seçin (PNG, JPG, WebP)', 'error');
+      return;
+    }
+
+    setIsProcessingBulk(true);
+    showNotification(`${files.length} fotoğraf işleniyor ve 3D oranlar hesaplanıyor...`);
+
+    try {
+      const results: BulkItemCandidate[] = [];
+      for (const file of files) {
+        try {
+          const item = await processSingleImageFile(file);
+          results.push(item);
+        } catch (err) {
+          console.error('Görsel işlenemedi:', file.name, err);
+        }
+      }
+
+      setBulkCandidates((prev) => [...prev, ...results]);
+      showNotification(`${results.length} fotoğraf toplu listeye eklendi!`);
+    } catch {
+      showNotification('Fotoğraflar işlenirken hata oluştu', 'error');
+    } finally {
+      setIsProcessingBulk(false);
+    }
+  };
+
+  const handleRemoveBulkCandidate = (id: string) => {
+    setBulkCandidates((prev) => prev.filter((item) => item.id !== id));
+  };
+
+  const handleClearBulkCandidates = () => {
+    setBulkCandidates([]);
+  };
+
+  const handleSaveBulk = async () => {
+    if (bulkCandidates.length === 0) {
+      showNotification('Lütfen önce yüklenecek fotoğrafları seçin', 'error');
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      const startCount = exhibits.length;
+      const newExhibits: Exhibit[] = bulkCandidates.map((item, idx) => {
+        const posIdx = startCount + idx;
+        const ring = Math.floor(posIdx / 8);
+        const angle = (posIdx * (Math.PI * 2)) / 8 + ring * 0.4;
+        const dist = 7 + ring * 6 + (posIdx % 3) * 1.5;
+        const posX = Math.round(Math.sin(angle) * dist * 10) / 10;
+        const posZ = Math.round(Math.cos(angle) * dist * 10) / 10;
+        const rotY = Math.round((angle + Math.PI) * 100) / 100;
+
+        return {
+          id: item.id,
+          title: item.title.trim() || 'Arkeolojik Eser',
+          subtitle: '',
+          era: 'Bilinmiyor',
+          provenance: 'Arkeolojik Saha',
+          material: 'Çeşitli',
+          description: `${item.title.trim()} için detaylı açıklama.`,
+          imageUrl: item.imageUrl,
+          frameStyle: bulkFrameStyle,
+          position: [posX, 0, posZ],
+          rotationY: rotY,
+          aspectRatio: item.aspectRatio,
+          tags: ['Toplu Yükleme'],
+          createdAt: Date.now() + idx,
+        };
+      });
+
+      const updatedList = [...newExhibits, ...exhibits];
+      await onSaveExhibits(updatedList);
+
+      showNotification(`${bulkCandidates.length} adet eser sergiye başarıyla kaydedildi ve yayınlandı!`);
+      setBulkCandidates([]);
+      setActiveTab('list');
+    } catch (err) {
+      showNotification(
+        'Toplu kayıt hatası: ' + (err instanceof Error ? err.message : String(err)),
+        'error'
+      );
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
   // Auto-detect image aspect ratio if user pastes an external image URL
   useEffect(() => {
@@ -482,7 +650,24 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                   }`}
                 >
                   <Plus className="w-3.5 h-3.5" />
-                  <span>Yeni Eser Ekle</span>
+                  <span>Tekli Eser Ekle</span>
+                </button>
+                <button
+                  id="admin-tab-bulk-btn"
+                  onClick={() => setActiveTab('bulk')}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-serif flex items-center gap-1.5 transition-colors ${
+                    activeTab === 'bulk'
+                      ? 'bg-amber-500 text-stone-950 font-bold'
+                      : 'bg-stone-900 text-stone-400 hover:text-stone-200'
+                  }`}
+                >
+                  <Images className="w-3.5 h-3.5" />
+                  <span>Toplu Görsel Yükle</span>
+                  {bulkCandidates.length > 0 && (
+                    <span className="px-1.5 py-0.2 rounded-full bg-amber-950 text-amber-300 font-mono text-[10px] border border-amber-400/40">
+                      {bulkCandidates.length}
+                    </span>
+                  )}
                 </button>
               </div>
 
@@ -624,7 +809,7 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                     </div>
                   </div>
                 )
-              ) : (
+              ) : activeTab === 'editor' ? (
                 /* Artifact Form Editor */
                 <form onSubmit={handleSaveForm} className="space-y-5">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
@@ -896,7 +1081,201 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                     </button>
                   </div>
                 </form>
-              )}
+              ) : activeTab === 'bulk' ? (
+                /* Bulk Upload Studio */
+                <div className="space-y-5">
+                  {/* Info Header */}
+                  <div className="p-4 rounded-2xl bg-amber-950/30 border border-amber-500/30 flex items-start gap-3">
+                    <div className="p-2 rounded-xl bg-amber-500/20 text-amber-300 shrink-0">
+                      <Images className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <h4 className="font-serif text-sm font-bold text-amber-200">
+                        Toplu Görsel Yükleme Stüdyosu
+                      </h4>
+                      <p className="text-xs text-stone-300 mt-1 leading-relaxed">
+                        Birden fazla fotoğraf yükleyerek tek tıkla onlarca 3D eser oluşturun. Her bir fotoğrafın boyutu ve en-boy oranı otomatik tespit edilecek, 3D kaidesi sergi alanına helezonik düzende yerleştirilecektir.
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Batch Settings & File Picker */}
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    {/* Frame Style Selector */}
+                    <div className="md:col-span-1 space-y-2">
+                      <label className="block text-xs font-serif text-amber-200">
+                        Varsayılan 3D Kaide Stili
+                      </label>
+                      <div className="space-y-1.5">
+                        {[
+                          { id: 'stone_pedestal', label: 'Klasik Mermer Kaide' },
+                          { id: 'glass_vitrine', label: 'Müze Cam Vitrini' },
+                          { id: 'bronze_stela', label: 'Antik Bronz Stel' },
+                          { id: 'obsidian_monolith', label: 'Obsidyen Monolit' },
+                        ].map((style) => (
+                          <button
+                            key={style.id}
+                            type="button"
+                            onClick={() => setBulkFrameStyle(style.id as DisplayFrameStyle)}
+                            className={`w-full p-2.5 rounded-xl border text-left text-xs transition-all ${
+                              bulkFrameStyle === style.id
+                                ? 'bg-amber-500/20 border-amber-400 text-amber-200 font-semibold'
+                                : 'bg-stone-900 border-stone-800 text-stone-400 hover:border-stone-700'
+                            }`}
+                          >
+                            {style.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Multi-file Upload Box */}
+                    <div className="md:col-span-2">
+                      <label className="block text-xs font-serif text-amber-200 mb-2">
+                        Fotoğrafları Seçin veya Sürükleyin
+                      </label>
+                      <div
+                        onDragOver={(e) => e.preventDefault()}
+                        onDrop={(e) => {
+                          e.preventDefault();
+                          if (e.dataTransfer.files) {
+                            handleBulkFilesSelected(e.dataTransfer.files);
+                          }
+                        }}
+                        onClick={() => bulkFileInputRef.current?.click()}
+                        className="border-2 border-dashed border-stone-700 hover:border-amber-500/60 transition-colors rounded-2xl p-6 bg-stone-900/40 cursor-pointer flex flex-col items-center justify-center text-center h-[180px] group"
+                      >
+                        <div className="p-3 rounded-full bg-stone-800 group-hover:bg-amber-500 group-hover:text-stone-950 text-amber-400 transition-colors mb-2">
+                          <Upload className="w-6 h-6" />
+                        </div>
+                        <p className="text-xs font-medium text-stone-200">
+                          Toplu fotoğraf seçmek için tıklayın veya sürükleyin
+                        </p>
+                        <p className="text-[11px] text-stone-400 mt-1">
+                          Birden fazla PNG, JPG, WebP fotoğraf seçebilirsiniz
+                        </p>
+                        <input
+                          ref={bulkFileInputRef}
+                          id="bulk-file-input"
+                          type="file"
+                          accept="image/*"
+                          multiple
+                          onChange={(e) => {
+                            if (e.target.files) handleBulkFilesSelected(e.target.files);
+                          }}
+                          className="hidden"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Candidate List Preview */}
+                  {isProcessingBulk ? (
+                    <div className="py-12 text-center flex flex-col items-center justify-center bg-stone-900/30 rounded-2xl border border-stone-800">
+                      <Loader2 className="w-8 h-8 text-amber-400 animate-spin mb-3" />
+                      <p className="text-xs font-serif text-stone-200">Fotoğraflar işleniyor ve 3D kaideler oranlanıyor...</p>
+                    </div>
+                  ) : bulkCandidates.length > 0 ? (
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between pt-2 border-t border-stone-800">
+                        <span className="text-xs font-serif text-amber-300 font-semibold">
+                          Hazırlanan Eserler ({bulkCandidates.length} Adet)
+                        </span>
+                        <button
+                          type="button"
+                          onClick={handleClearBulkCandidates}
+                          className="text-xs text-stone-400 hover:text-rose-400 transition-colors flex items-center gap-1"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                          <span>Listeyi Temizle</span>
+                        </button>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-[320px] overflow-y-auto pr-1">
+                        {bulkCandidates.map((cand, idx) => (
+                          <div
+                            key={cand.id}
+                            className="p-3 rounded-xl bg-stone-900/80 border border-stone-800 flex items-center gap-3 relative group"
+                          >
+                            <div className="w-14 h-14 rounded-lg bg-stone-950 overflow-hidden shrink-0 border border-stone-800">
+                              <img src={cand.imageUrl} alt={cand.title} className="w-full h-full object-cover" />
+                            </div>
+                            <div className="flex-1 min-w-0 space-y-1">
+                              <input
+                                type="text"
+                                value={cand.title}
+                                onChange={(e) => {
+                                  const val = e.target.value;
+                                  setBulkCandidates((prev) =>
+                                    prev.map((c) => (c.id === cand.id ? { ...c, title: val } : c))
+                                  );
+                                }}
+                                className="w-full px-2 py-1 rounded bg-stone-950 border border-stone-700 text-stone-100 text-xs focus:outline-none focus:border-amber-500 font-serif"
+                                placeholder="Eser başlığı..."
+                              />
+                              <div className="flex items-center gap-2 text-[10px] text-stone-400 font-mono">
+                                <span>Sıra #{idx + 1}</span>
+                                <span className="text-amber-300/80">
+                                  {cand.aspectRatio >= 1.4
+                                    ? `${cand.aspectRatio}:1 (Geniş)`
+                                    : cand.aspectRatio > 1.05
+                                    ? `${cand.aspectRatio}:1 (Yatay)`
+                                    : cand.aspectRatio >= 0.95
+                                    ? '1:1 (Kare)'
+                                    : `${cand.aspectRatio}:1 (Dikey)`}
+                                </span>
+                              </div>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveBulkCandidate(cand.id)}
+                              className="p-1.5 rounded-lg bg-stone-800 text-stone-400 hover:text-rose-400 hover:bg-stone-700 transition-colors shrink-0"
+                              title="Kaldır"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+
+                      {/* Action Buttons */}
+                      <div className="pt-4 border-t border-stone-800 flex items-center justify-between">
+                        <button
+                          type="button"
+                          onClick={() => bulkFileInputRef.current?.click()}
+                          className="px-4 py-2 rounded-xl bg-stone-900 hover:bg-stone-800 text-stone-300 text-xs font-sans border border-stone-800 flex items-center gap-1.5"
+                        >
+                          <Plus className="w-3.5 h-3.5" />
+                          <span>Daha Fazla Fotoğraf Ekle</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          disabled={isSaving}
+                          onClick={handleSaveBulk}
+                          className={`px-6 py-2.5 rounded-xl font-serif font-bold text-xs flex items-center gap-2 shadow-lg transition-colors ${
+                            isSaving
+                              ? 'bg-amber-600/60 text-stone-900 cursor-wait opacity-75'
+                              : 'bg-amber-500 hover:bg-amber-400 text-stone-950'
+                          }`}
+                        >
+                          {isSaving ? (
+                            <>
+                              <Loader2 className="w-4 h-4 animate-spin" />
+                              <span>3D Kaideler Oluşturuluyor...</span>
+                            </>
+                          ) : (
+                            <>
+                              <Check className="w-4 h-4" />
+                              <span>{bulkCandidates.length} Adet Eseri Sergide Oluştur & Yayınla</span>
+                            </>
+                          )}
+                        </button>
+                      </div>
+                    </div>
+                  ) : null}
+                </div>
+              ) : null}
             </div>
           </div>
         )}

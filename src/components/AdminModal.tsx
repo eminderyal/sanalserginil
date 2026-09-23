@@ -121,7 +121,7 @@ export const AdminModal: React.FC<AdminModalProps> = ({
         img.onerror = () => reject(new Error('Görsel yüklenemedi'));
         img.onload = () => {
           const aspect = Math.round((img.naturalWidth / img.naturalHeight) * 100) / 100;
-          const maxDim = 800;
+          const maxDim = 600;
           let w = img.width;
           let h = img.height;
           if (w > maxDim || h > maxDim) {
@@ -140,9 +140,9 @@ export const AdminModal: React.FC<AdminModalProps> = ({
           let finalUrl = dataUrl;
           if (ctx) {
             ctx.drawImage(img, 0, 0, w, h);
-            let optimized = canvas.toDataURL('image/jpeg', 0.78);
-            if (optimized.length > 500000) {
-              optimized = canvas.toDataURL('image/jpeg', 0.6);
+            let optimized = canvas.toDataURL('image/jpeg', 0.65);
+            if (optimized.length > 250000) {
+              optimized = canvas.toDataURL('image/jpeg', 0.5);
             }
             finalUrl = optimized;
           }

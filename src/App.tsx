@@ -52,16 +52,21 @@ export default function App() {
       (cloudExhibits) => {
         const list = Array.isArray(cloudExhibits) ? cloudExhibits : [];
         const filtered = list.filter((e) => e && e.id && !MOCK_IDS.has(e.id));
-        setExhibits(filtered);
-        setIsCloudSynced(true);
-        try {
-          localStorage.setItem('archaeo_exhibits_data', JSON.stringify(filtered));
-        } catch (e) {
-          console.warn('Failed to cache exhibits locally', e);
+        if (filtered.length > 0) {
+          setExhibits(filtered);
+          setIsCloudSynced(true);
+          try {
+            localStorage.setItem('archaeo_exhibits_data', JSON.stringify(filtered));
+          } catch (e) {
+            console.warn('Failed to cache exhibits locally', e);
+          }
+        } else {
+          setIsCloudSynced(true);
         }
       },
       (error) => {
-        console.warn('Firestore cloud connection warning, using local state:', error);
+        console.warn('Firestore cloud connection / quota limit reached, operating in local mode:', error);
+        setIsCloudSynced(false);
       }
     );
 
@@ -83,8 +88,8 @@ export default function App() {
       await syncAllExhibitsToCloud(newExhibits);
       setIsCloudSynced(true);
     } catch (err) {
-      console.error('Failed to sync exhibits to Firestore cloud database:', err);
-      throw err;
+      console.warn('Operating in offline/local storage mode (cloud quota limit reached):', err);
+      setIsCloudSynced(false);
     }
   };
 

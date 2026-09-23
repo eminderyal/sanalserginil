@@ -29,12 +29,17 @@ export interface FirestoreErrorInfo {
 }
 
 export function handleFirestoreError(error: unknown, operationType: OperationType, path: string | null) {
+  const errMsg = error instanceof Error ? error.message : String(error);
   const errInfo: FirestoreErrorInfo = {
-    error: error instanceof Error ? error.message : String(error),
+    error: errMsg,
     operationType,
     path,
   };
-  console.error('Firestore Error: ', JSON.stringify(errInfo));
+  if (errMsg.includes('Quota limit exceeded') || errMsg.includes('Quota exceeded') || errMsg.includes('RESOURCE_EXHAUSTED')) {
+    console.warn('Firestore Free Tier Quota Reached. Operating in offline local storage mode.');
+  } else {
+    console.error('Firestore Error: ', JSON.stringify(errInfo));
+  }
   return errInfo;
 }
 
@@ -162,28 +167,60 @@ export async function deleteExhibitFromCloud(exhibitId: string): Promise<void> {
 }
 
 /**
- * Sync all exhibits (batch update / replace)
+ * Sync all exhibits (batch update / replace) with diffing and writeBatch
+ * to drastically minimize Firestore read/write quota consumption.
  */
 export async function syncAllExhibitsToCloud(exhibits: Exhibit[]): Promise<void> {
   try {
     const exhibitsRef = collection(db, EXHIBITS_COLLECTION);
     const existingDocs = await getDocs(exhibitsRef);
-    const existingIds = new Set(existingDocs.docs.map((d) => d.id));
+    const existingMap = new Map(existingDocs.docs.map((d) => [d.id, { ref: d.ref, data: d.data() }]));
     const newIds = new Set(exhibits.map((e) => e.id));
 
-    // 1. Delete removed exhibits individually or via batch
-    for (const docSnap of existingDocs.docs) {
-      if (!newIds.has(docSnap.id)) {
-        await deleteDoc(docSnap.ref);
+    let batch = writeBatch(db);
+    let opCount = 0;
+
+    const commitBatchIfNeeded = async () => {
+      if (opCount > 0) {
+        await batch.commit();
+        batch = writeBatch(db);
+        opCount = 0;
+      }
+    };
+
+    // 1. Delete docs that no longer exist in the local exhibits list
+    for (const [id, { ref }] of existingMap.entries()) {
+      if (!newIds.has(id)) {
+        batch.delete(ref);
+        opCount++;
+        if (opCount >= 400) await commitBatchIfNeeded();
       }
     }
 
-    // 2. Set all current exhibits with sanitized data
+    // 2. Set only new or modified exhibits
     for (const exhibit of exhibits) {
       const sanitized = sanitizeExhibitForFirestore(exhibit);
-      const docRef = doc(db, EXHIBITS_COLLECTION, sanitized.id);
-      await setDoc(docRef, sanitized, { merge: true });
+      const existing = existingMap.get(sanitized.id)?.data;
+
+      // Diff check: only perform write if document is new or key fields changed
+      const hasChanged =
+        !existing ||
+        existing.title !== sanitized.title ||
+        existing.imageUrl !== sanitized.imageUrl ||
+        existing.description !== sanitized.description ||
+        existing.frameStyle !== sanitized.frameStyle ||
+        existing.rotationY !== sanitized.rotationY ||
+        JSON.stringify(existing.position) !== JSON.stringify(sanitized.position);
+
+      if (hasChanged) {
+        const docRef = doc(db, EXHIBITS_COLLECTION, sanitized.id);
+        batch.set(docRef, sanitized, { merge: true });
+        opCount++;
+        if (opCount >= 400) await commitBatchIfNeeded();
+      }
     }
+
+    await commitBatchIfNeeded();
   } catch (error) {
     handleFirestoreError(error, OperationType.WRITE, EXHIBITS_COLLECTION);
     throw error;

@@ -28,7 +28,7 @@ export class PlinthBuilder {
     exhibit: Exhibit,
     onPointerOver?: () => void,
     onPointerOut?: () => void
-  ): { group: THREE.Group; interactiveMesh: THREE.Mesh; spotlight: THREE.SpotLight; beacon: THREE.Mesh } {
+  ): { group: THREE.Group; interactiveMesh: THREE.Mesh; beacon: THREE.Mesh } {
     const group = new THREE.Group();
     group.name = `Exhibit_${exhibit.id}`;
     group.userData = { exhibitId: exhibit.id, exhibit };
@@ -192,8 +192,9 @@ export class PlinthBuilder {
 
     const canvasMat = new THREE.MeshStandardMaterial({
       map: this.defaultTexture,
-      roughness: 0.4,
+      roughness: 0.35,
       metalness: 0.05,
+      emissive: 0x28221b,
       side: THREE.FrontSide,
     });
 
@@ -286,13 +287,34 @@ export class PlinthBuilder {
     }
     group.add(plaqueMesh);
 
-    // 6. Overhead Focused Museum Spotlight
-    const spotlight = new THREE.SpotLight(0xfff3d6, 2.4, 8, Math.PI / 5, 0.4, 1.2);
-    spotlight.position.set(0, framePosY + imageHeight * 0.5 + 1.6, 1.4);
-    spotlight.target = pictureMesh;
-    spotlight.castShadow = false;
-    group.add(spotlight);
-    group.add(spotlight.target);
+    // 6. Overhead Decorative Gallery Light Fixture (Mesh-based, 0 WebGL Light Uniform overhead)
+    const fixtureGroup = new THREE.Group();
+    const armMesh = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.025, 0.025, 0.65, 8),
+      new THREE.MeshStandardMaterial({ color: 0xc89b3c, roughness: 0.3, metalness: 0.85 })
+    );
+    armMesh.rotation.z = -Math.PI / 6;
+    armMesh.position.set(0, framePosY + imageHeight * 0.5 + 0.25, 0.35);
+    fixtureGroup.add(armMesh);
+
+    const shadeMesh = new THREE.Mesh(
+      new THREE.ConeGeometry(0.18, 0.22, 12),
+      new THREE.MeshStandardMaterial({ color: 0x33281c, roughness: 0.4, metalness: 0.8 })
+    );
+    shadeMesh.rotation.x = Math.PI / 4;
+    shadeMesh.position.set(0, framePosY + imageHeight * 0.5 + 0.4, 0.55);
+    fixtureGroup.add(shadeMesh);
+
+    // Glowing Lamp Bulb Face (MeshBasicMaterial - zero shader uniform cost)
+    const bulbMesh = new THREE.Mesh(
+      new THREE.CircleGeometry(0.1, 12),
+      new THREE.MeshBasicMaterial({ color: 0xfff3d6 })
+    );
+    bulbMesh.rotation.x = Math.PI / 4;
+    bulbMesh.position.set(0, framePosY + imageHeight * 0.5 + 0.32, 0.58);
+    fixtureGroup.add(bulbMesh);
+
+    group.add(fixtureGroup);
 
     // 7. Glowing Ground Inspection Beacon
     const beaconGeo = new THREE.RingGeometry(1.2, 1.45, 32);
@@ -317,6 +339,6 @@ export class PlinthBuilder {
       group.scale.set(exhibit.scale, exhibit.scale, exhibit.scale);
     }
 
-    return { group, interactiveMesh, spotlight, beacon };
+    return { group, interactiveMesh, beacon };
   }
 }

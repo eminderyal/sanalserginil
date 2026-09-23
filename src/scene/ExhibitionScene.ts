@@ -100,7 +100,7 @@ export class ExhibitionScene {
       65,
       container.clientWidth / container.clientHeight,
       0.1,
-      350
+      1200
     );
     this.camera.position.copy(this.playerPos);
 
@@ -170,8 +170,8 @@ export class ExhibitionScene {
         if (dist > maxDist) maxDist = dist;
       }
     });
-    // Scale dynamically with exhibit count (guarantees spaciousness as more artifacts are added)
-    const countRadius = Math.max(24, Math.sqrt(Math.max(1, exhibits.length)) * 10 + 10);
+    // Scale dynamically with exhibit count (guarantees spaciousness as up to 500+ artifacts are added)
+    const countRadius = Math.max(24, Math.sqrt(Math.max(1, exhibits.length)) * 3.8 + 12);
     return Math.max(26, maxDist + 12, countRadius);
   }
 

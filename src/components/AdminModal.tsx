@@ -40,6 +40,30 @@ interface AdminModalProps {
   onFocusExhibit: (exhibit: Exhibit) => void;
 }
 
+export function calculateSpiralPosition(index: number): { posX: number; posZ: number; rotY: number } {
+  let ring = 0;
+  let accumulated = 0;
+  let currentRadius = 7.0;
+  let ringCapacity = 10;
+
+  while (accumulated + ringCapacity <= index) {
+    accumulated += ringCapacity;
+    ring++;
+    currentRadius += 4.5;
+    ringCapacity = Math.max(10, Math.floor((2 * Math.PI * currentRadius) / 4.2));
+  }
+
+  const indexInRing = index - accumulated;
+  const ringOffset = ring * 0.35;
+  const angle = (indexInRing * Math.PI * 2) / ringCapacity + ringOffset;
+
+  const posX = Math.round(Math.sin(angle) * currentRadius * 10) / 10;
+  const posZ = Math.round(Math.cos(angle) * currentRadius * 10) / 10;
+  const rotY = Math.round((angle + Math.PI) * 100) / 100;
+
+  return { posX, posZ, rotY };
+}
+
 export const AdminModal: React.FC<AdminModalProps> = ({
   isOpen,
   onClose,
@@ -195,12 +219,7 @@ export const AdminModal: React.FC<AdminModalProps> = ({
       const startCount = exhibits.length;
       const newExhibits: Exhibit[] = bulkCandidates.map((item, idx) => {
         const posIdx = startCount + idx;
-        const ring = Math.floor(posIdx / 8);
-        const angle = (posIdx * (Math.PI * 2)) / 8 + ring * 0.4;
-        const dist = 7 + ring * 6 + (posIdx % 3) * 1.5;
-        const posX = Math.round(Math.sin(angle) * dist * 10) / 10;
-        const posZ = Math.round(Math.cos(angle) * dist * 10) / 10;
-        const rotY = Math.round((angle + Math.PI) * 100) / 100;
+        const { posX, posZ, rotY } = calculateSpiralPosition(posIdx);
 
         return {
           id: item.id,
@@ -290,13 +309,10 @@ export const AdminModal: React.FC<AdminModalProps> = ({
     setFormAspectRatio(undefined);
     
     // Auto find an open spot with spiral expansion around the sanctuary forum
-    const count = exhibits.length;
-    const ring = Math.floor(count / 8);
-    const angle = (count * (Math.PI * 2)) / 8 + ring * 0.4;
-    const dist = 7 + ring * 6 + (count % 3) * 1.5;
-    setFormPosX(Math.round(Math.sin(angle) * dist * 10) / 10);
-    setFormPosZ(Math.round(Math.cos(angle) * dist * 10) / 10);
-    setFormRotationY(Math.round((angle + Math.PI) * 100) / 100);
+    const { posX, posZ, rotY } = calculateSpiralPosition(exhibits.length);
+    setFormPosX(posX);
+    setFormPosZ(posZ);
+    setFormRotationY(rotY);
     setFormTags('');
     setFormAudioText('');
     setActiveTab('editor');
